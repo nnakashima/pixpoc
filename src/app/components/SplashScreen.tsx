@@ -28,7 +28,7 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
             <img 
               src={pixpocLogo} 
               alt="PixPoc Logo" 
-              className="h-16 md:h-20 object-contain"
+              className="h-32 md:h-40 object-contain"
               style={{
                 filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.3)) drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5))',
               }}
