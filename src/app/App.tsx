@@ -7,8 +7,8 @@ import { BannerConfigModal } from './components/BannerConfigModal';
 import { AlertTriangle } from 'lucide-react';
 import { X, CheckCircle, Trash2, User, HelpCircle } from 'lucide-react';
 import { ImageIcon } from 'lucide-react';
-// Assets moved to public/ for production deployment
-const bannerImage = '/banner-default.svg';
+// Use the original Figma banner image with glassmorphism effect
+import bannerImage from 'figma:asset/3b5ea7fcab5411fcf9e37cae58c81e08e14c7212.png';
 const faviconImage = '/favicon.svg';
 import {
   trackBalloonPop,

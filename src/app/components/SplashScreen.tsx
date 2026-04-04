@@ -1,7 +1,8 @@
-import { motion } from 'motion/react';
+import React from 'react';
 import { Play, Settings, Gift, Lock, Zap } from 'lucide-react';
-// Asset moved to public/ for production deployment
-const pixpocLogo = '/logo.svg';
+import { motion } from 'motion/react';
+// Use the original Figma logo image with transparent background
+import pixpocLogo from 'figma:asset/905e976f0b7c6dfdd4f678c3c1c4c0cc9121a184.png';
 
 interface SplashScreenProps {
   onStart: () => void;
