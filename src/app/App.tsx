@@ -708,9 +708,9 @@ export default function App() {
 
         {/* Mobile settings drawer */}
         {showSettingsMobile && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden flex justify-end">
-            <div className="w-full max-w-md h-full bg-slate-900 border-l border-white/10 shadow-2xl overflow-y-auto">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden flex justify-end overflow-hidden">
+            <div className="w-full max-w-md h-full bg-slate-900 border-l border-white/10 shadow-2xl flex flex-col">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
                 <span className="text-white font-semibold">Configurações</span>
                 <button
                   onClick={() => setShowSettingsMobile(false)}
@@ -732,7 +732,8 @@ export default function App() {
                 onScreenshot={handleOpenWinnerModal}
                 isShuffling={isShuffling}
                 shuffleProgress={shuffleProgress}
-                className="w-full max-w-none"
+                fullWidth
+                className="max-w-none flex-1 overflow-y-auto"
                 style={{ boxShadow: 'none', borderLeft: 'none' }}
               />
             </div>

@@ -16,6 +16,7 @@ interface SettingsPanelProps {
   shuffleProgress?: number;
   className?: string;
   style?: React.CSSProperties;
+  fullWidth?: boolean;
 }
 
 export function SettingsPanel({
@@ -33,10 +34,13 @@ export function SettingsPanel({
   shuffleProgress,
   className,
   style,
+  fullWidth = false,
 }: SettingsPanelProps) {
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [editingPrize, setEditingPrize] = useState<string | null>(null);
   const [prizeInput, setPrizeInput] = useState('');
+
+  const widthClass = fullWidth ? 'w-full' : 'w-80';
 
   const incrementPrize = (prize: string) => {
     setPrizeSelections({
@@ -108,7 +112,7 @@ export function SettingsPanel({
 
   return (
     <div
-      className={`w-80 h-full p-6 overflow-y-auto ${className ?? ''}`}
+      className={`${widthClass} h-full p-4 sm:p-6 overflow-y-auto ${className ?? ''}`}
       style={{
         background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(20px)',
