@@ -41,6 +41,8 @@ export function SettingsPanel({
   const [prizeInput, setPrizeInput] = useState('');
 
   const widthClass = fullWidth ? 'w-full' : 'w-80';
+  const containerPadding = fullWidth ? 'p-3' : 'p-6';
+  const containerOverflow = fullWidth ? 'overflow-hidden' : 'overflow-y-auto';
 
   const incrementPrize = (prize: string) => {
     setPrizeSelections({
@@ -112,7 +114,7 @@ export function SettingsPanel({
 
   return (
     <div
-      className={`${widthClass} h-full p-3 sm:p-6 overflow-hidden ${className ?? ''}`}
+      className={`${widthClass} h-full ${containerPadding} ${containerOverflow} ${className ?? ''}`}
       style={{
         background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(20px)',
@@ -123,8 +125,8 @@ export function SettingsPanel({
     >
       <h2 className="hidden sm:block text-2xl font-bold text-white mb-4">Configurações</h2>
 
-      <div className="flex flex-col h-full overflow-hidden space-y-4 sm:space-y-6">
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 sm:space-y-6">
+      <div className={`flex flex-col h-full ${fullWidth ? 'overflow-hidden' : ''} space-y-4 sm:space-y-6`}>
+        <div className={`flex-1 ${fullWidth ? 'overflow-y-auto' : ''} pr-1 space-y-4 sm:space-y-6`}>
           {/* Number of balloons */}
           <div className="space-y-2">
             <label className="block text-white text-sm font-medium">
@@ -248,7 +250,7 @@ export function SettingsPanel({
         </div>
 
         {/* Footer actions sticky */}
-        <div className="sticky bottom-0 pt-2 pb-3 sm:pb-0 space-y-3 bg-slate-900/90 backdrop-blur">
+        <div className={`sticky bottom-0 pt-2 pb-3 sm:pb-0 space-y-3 ${fullWidth ? 'bg-slate-900/90 backdrop-blur px-1' : 'bg-transparent'}`}>
           <button
             onClick={onReset}
             disabled={isShuffling}

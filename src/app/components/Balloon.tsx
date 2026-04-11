@@ -17,7 +17,7 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
 
   const balloonWidth = 'var(--balloon-size, 128px)';
   const balloonHeight = 'var(--balloon-height, 160px)';
-  const wiggle = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 0.5 : 1;
+  const wiggle = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 0 : 1;
 
   const handleClick = () => {
     if (!isPopped) {
