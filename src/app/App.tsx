@@ -122,6 +122,7 @@ export default function App() {
     reference: '',
     pixKey: ''
   });
+  const [showSettingsMobile, setShowSettingsMobile] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleProgress, setShuffleProgress] = useState(0);
   const [shufflingColors, setShufflingColors] = useState<string[]>([]);
@@ -532,6 +533,12 @@ export default function App() {
     }
   };
 
+  // Mobile-first helpers
+  const isCompactMobileLayout = balloonCount <= 12;
+  const gridColumnsClass = isCompactMobileLayout
+    ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
+    : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+
   return (
     <>
       {/* Splash Screen */}
@@ -556,6 +563,14 @@ export default function App() {
           title="Como Usar"
         >
           <HelpCircle size={20} />
+        </button>
+
+        {/* Mobile settings toggle */}
+        <button
+          onClick={() => setShowSettingsMobile(true)}
+          className="lg:hidden fixed bottom-4 right-4 z-40 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-full shadow-xl backdrop-blur-lg hover:bg-white/20 transition-all"
+        >
+          Configurações
         </button>
 
         {/* Banner Config button - top right, next to Help */}
@@ -611,7 +626,10 @@ export default function App() {
           </header>
 
           {/* Balloon canvas */}
-          <main className="flex-1 p-6 md:p-12 overflow-auto">
+          <main
+            className={`flex-1 p-4 md:p-12 ${isCompactMobileLayout ? 'overflow-hidden' : 'overflow-auto'}`}
+            style={isCompactMobileLayout ? { maxHeight: 'calc(100vh - 140px)' } : undefined}
+          >
             <div className="max-w-7xl mx-auto">
               {/* Warning if counts don't match */}
               {balloonCount !== Object.keys(prizeSelections).reduce((acc, key) => acc + prizeSelections[key], 0) && (
@@ -629,7 +647,17 @@ export default function App() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 justify-items-center">
+              <div
+                className={`grid ${gridColumnsClass} gap-3 sm:gap-4 justify-items-center`}
+                style={
+                  isCompactMobileLayout
+                    ? {
+                        ['--balloon-size' as any]: 'min(24vw, 110px)',
+                        ['--balloon-height' as any]: 'calc(min(24vw, 110px) * 1.35)',
+                      }
+                    : undefined
+                }
+              >
                 {balloons.map((balloon, index) => (
                   <Balloon
                     key={balloon.id}
@@ -661,7 +689,7 @@ export default function App() {
         </div>
 
         {/* Settings panel */}
-        <aside className="lg:w-80 lg:h-screen lg:sticky lg:top-0">
+        <aside className="hidden lg:block lg:w-80 lg:h-screen lg:sticky lg:top-0">
           <SettingsPanel
             balloonCount={balloonCount}
             setBalloonCount={handleBalloonCountChange}
@@ -677,6 +705,39 @@ export default function App() {
             shuffleProgress={shuffleProgress}
           />
         </aside>
+
+        {/* Mobile settings drawer */}
+        {showSettingsMobile && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden flex justify-end">
+            <div className="w-full max-w-md h-full bg-slate-900 border-l border-white/10 shadow-2xl overflow-y-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <span className="text-white font-semibold">Configurações</span>
+                <button
+                  onClick={() => setShowSettingsMobile(false)}
+                  className="text-white/80 hover:text-white transition-colors"
+                >
+                  <X size={22} />
+                </button>
+              </div>
+              <SettingsPanel
+                balloonCount={balloonCount}
+                setBalloonCount={handleBalloonCountChange}
+                singleColor={singleColor}
+                setSingleColor={setSingleColor}
+                soundEnabled={soundEnabled}
+                setSoundEnabled={setSoundEnabled}
+                prizeSelections={prizeSelections}
+                setPrizeSelections={setPrizeSelections}
+                onReset={handleReset}
+                onScreenshot={handleOpenWinnerModal}
+                isShuffling={isShuffling}
+                shuffleProgress={shuffleProgress}
+                className="w-full max-w-none"
+                style={{ boxShadow: 'none', borderLeft: 'none' }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Duplicate Modal */}
         {showDuplicateModal && pendingBalloonCount !== null && (

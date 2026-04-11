@@ -14,6 +14,8 @@ interface SettingsPanelProps {
   onScreenshot: () => void;
   isShuffling?: boolean;
   shuffleProgress?: number;
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 export function SettingsPanel({
@@ -29,6 +31,8 @@ export function SettingsPanel({
   onScreenshot,
   isShuffling,
   shuffleProgress,
+  className,
+  style,
 }: SettingsPanelProps) {
   const [showPrizeModal, setShowPrizeModal] = useState(false);
   const [editingPrize, setEditingPrize] = useState<string | null>(null);
@@ -104,12 +108,13 @@ export function SettingsPanel({
 
   return (
     <div
-      className="w-80 h-full p-6 overflow-y-auto"
+      className={`w-80 h-full p-6 overflow-y-auto ${className ?? ''}`}
       style={{
         background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(20px)',
         borderLeft: '1px solid rgba(255, 255, 255, 0.1)',
         boxShadow: '-10px 0 30px rgba(0, 0, 0, 0.3)',
+        ...style,
       }}
     >
       <h2 className="text-2xl font-bold text-white mb-6">Configurações</h2>

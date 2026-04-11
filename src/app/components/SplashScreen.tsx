@@ -14,9 +14,9 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 z-50 flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 z-50 flex items-center justify-center p-4 overflow-hidden"
     >
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-xl h-full flex flex-col justify-center gap-3">
         {/* Logo/Title */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
@@ -44,7 +44,7 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/20 shadow-2xl mb-4"
+          className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/20 shadow-2xl mb-4 max-h-[65vh] overflow-y-auto"
         >
           <h2 className="text-xl md:text-2xl font-bold text-white mb-4 text-center">
             ✨ Como Usar

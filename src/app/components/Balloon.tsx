@@ -15,6 +15,9 @@ interface BalloonProps {
 export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled, isHighlighted, onToggleHighlight }: BalloonProps) {
   const [isHovered, setIsHovered] = useState(false);
 
+  const balloonWidth = 'var(--balloon-size, 128px)';
+  const balloonHeight = 'var(--balloon-height, 160px)';
+
   const handleClick = () => {
     if (!isPopped) {
       if (soundEnabled) {
@@ -50,7 +53,13 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
   };
 
   return (
-    <div className="relative w-32 h-40 flex items-center justify-center">
+    <div
+      className="relative flex items-center justify-center"
+      style={{
+        width: balloonWidth,
+        height: balloonHeight,
+      }}
+    >
       <AnimatePresence mode="wait">
         {!isPopped ? (
           <motion.div
@@ -96,8 +105,8 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
             <div
               className="relative overflow-hidden"
               style={{
-                width: '96px',
-                height: '120px',
+                width: 'calc(var(--balloon-size, 128px) * 0.75)',
+                height: 'calc(var(--balloon-height, 160px) * 0.75)',
                 borderRadius: '50% 50% 48% 48% / 55% 55% 45% 45%',
                 background: `linear-gradient(135deg, ${color} 0%, ${color}dd 50%, ${color}88 100%)`,
                 boxShadow: `inset -10px -10px 20px rgba(0, 0, 0, 0.3), inset 10px 10px 20px rgba(255, 255, 255, 0.3), 0 10px 30px rgba(0, 0, 0, 0.3)`,
@@ -136,7 +145,7 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
             {/* String - more curved/realistic */}
             <svg
               className="absolute left-1/2 -translate-x-1/2"
-              style={{ top: '120px' }}
+              style={{ top: 'calc(var(--balloon-height, 160px) * 0.75)' }}
               width="40"
               height="32"
               viewBox="0 0 40 32"
@@ -161,8 +170,10 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
           >
             {/* Currency reveal */}
             <div
-              className="w-32 h-32 rounded-lg flex items-center justify-center text-white font-bold text-2xl transition-all duration-300"
+              className="rounded-lg flex items-center justify-center text-white font-bold text-2xl transition-all duration-300"
               style={{
+                width: 'calc(var(--balloon-size, 128px) * 0.9)',
+                height: 'calc(var(--balloon-height, 160px) * 0.85)',
                 background: isHighlighted 
                   ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' // Amarelo (mesmo do box Ganhador)
                   : 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)', // Verde
