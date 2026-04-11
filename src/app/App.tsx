@@ -564,14 +564,16 @@ export default function App() {
           <div className="text-white/80">🌐 IP: {ipAddress}</div>
         </div>
 
-        {/* Help button - top right */}
-        <button
-          onClick={() => setShowSplash(true)}
-          className="fixed top-4 right-4 z-40 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
-          title="Como Usar"
-        >
-          <HelpCircle size={20} />
-        </button>
+        {/* Help button - top right (desktop only) */}
+        {!isMobile && (
+          <button
+            onClick={() => setShowSplash(true)}
+            className="fixed top-4 right-4 z-40 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
+            title="Como Usar"
+          >
+            <HelpCircle size={20} />
+          </button>
+        )}
 
         {/* Banner Config button - top right, next to Help */}
         <button
@@ -669,6 +671,7 @@ export default function App() {
                     soundEnabled={soundEnabled}
                     isHighlighted={highlightedBalloons === balloon.id}
                     onToggleHighlight={handleToggleBalloonHighlight}
+                    disableFloat={isMobile}
                   />
                 ))}
               </div>

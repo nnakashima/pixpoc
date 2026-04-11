@@ -10,14 +10,15 @@ interface BalloonProps {
   soundEnabled: boolean;
   isHighlighted?: boolean;
   onToggleHighlight?: (number: number) => void;
+  disableFloat?: boolean;
 }
 
-export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled, isHighlighted, onToggleHighlight }: BalloonProps) {
+export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled, isHighlighted, onToggleHighlight, disableFloat = false }: BalloonProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   const balloonWidth = 'var(--balloon-size, 128px)';
   const balloonHeight = 'var(--balloon-height, 160px)';
-  const wiggle = typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches ? 0 : 1;
+  const wiggle = disableFloat ? 0 : 1;
 
   const handleClick = () => {
     if (!isPopped) {
