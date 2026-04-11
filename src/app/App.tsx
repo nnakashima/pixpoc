@@ -573,14 +573,6 @@ export default function App() {
           <HelpCircle size={20} />
         </button>
 
-        {/* Mobile settings toggle */}
-        <button
-          onClick={() => setShowSettingsMobile(true)}
-          className="lg:hidden fixed bottom-4 right-4 z-40 bg-white/10 border border-white/20 text-white px-4 py-3 rounded-full shadow-xl backdrop-blur-lg hover:bg-white/20 transition-all"
-        >
-          Configurações
-        </button>
-
         {/* Banner Config button - top right, next to Help */}
         <button
           onClick={handleOpenBannerConfig}
@@ -630,55 +622,13 @@ export default function App() {
                   )}
                 </div>
               )}
-
-              {/* Mobile control bar under banner */}
-              {isMobile && (
-                <div className="mt-4 grid grid-cols-2 gap-3 text-white text-sm">
-                  <div className="col-span-2 bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
-                    <div className="font-semibold text-xs opacity-80">Data & IP</div>
-                    <div className="text-sm">
-                      {currentDateTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {currentDateTime.toLocaleTimeString('pt-BR')}
-                    </div>
-                    <div className="text-xs opacity-80">IP: {ipAddress}</div>
-                  </div>
-                  <button
-                    onClick={() => setShowSettingsMobile(true)}
-                    className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left hover:bg-white/15 transition"
-                  >
-                    <div className="font-semibold">Configurações</div>
-                    <div className="text-xs opacity-80">Abrir painel</div>
-                  </button>
-                  <button
-                    onClick={() => setShowSplash(true)}
-                    className="bg-purple-600/90 rounded-xl px-3 py-2 text-left hover:bg-purple-700 transition"
-                  >
-                    <div className="font-semibold flex items-center gap-1"><HelpCircle size={14}/> Ajuda</div>
-                    <div className="text-xs opacity-80">Como usar</div>
-                  </button>
-                  <button
-                    onClick={handleOpenBannerConfig}
-                    className="bg-orange-500/90 rounded-xl px-3 py-2 text-left hover:bg-orange-600 transition"
-                  >
-                    <div className="font-semibold flex items-center gap-1"><ImageIcon size={14}/> Banner</div>
-                    <div className="text-xs opacity-80">Configurar</div>
-                  </button>
-                  <div className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
-                    <div className="font-semibold">Balões Restantes</div>
-                    <div className="text-lg font-bold">{balloonCount - Object.keys(poppedBalloons).length}</div>
-                  </div>
-                    <div className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
-                    <div className="font-semibold">Estourados</div>
-                    <div className="text-lg font-bold">{Object.keys(poppedBalloons).length}</div>
-                  </div>
-                </div>
-              )}
             </div>
           </header>
 
           {/* Balloon canvas */}
           <main
             className={`flex-1 p-4 md:p-12 ${isCompactMobileLayout ? 'overflow-hidden' : 'overflow-auto'}`}
-            style={isCompactMobileLayout ? { maxHeight: 'calc(100vh - 140px)' } : undefined}
+            style={isMobile ? undefined : (isCompactMobileLayout ? { maxHeight: 'calc(100vh - 140px)' } : undefined)}
           >
             <div className="max-w-7xl mx-auto">
               {/* Warning if counts don't match */}
@@ -723,17 +673,45 @@ export default function App() {
                 ))}
               </div>
 
-              {/* Stats */}
-              <div className="mt-8 flex justify-center gap-6 text-white">
-                <div className="bg-white/10 backdrop-blur-lg px-6 py-3 rounded-full border border-white/20">
-                  <span className="text-sm opacity-70">Balões Restantes: </span>
-                  <span className="font-bold text-lg">{balloonCount - Object.keys(poppedBalloons).length}</span>
+              {/* Mobile single-line control ribbon */}
+              {isMobile && (
+                <div className="mt-6 overflow-x-auto whitespace-nowrap flex gap-3 pb-2">
+                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[180px]">
+                    <span className="text-xs opacity-80 font-semibold">Data & IP</span>
+                    <span className="text-sm">{currentDateTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {currentDateTime.toLocaleTimeString('pt-BR')}</span>
+                    <span className="text-xs opacity-80">IP: {ipAddress}</span>
+                  </div>
+                  <button
+                    onClick={() => setShowSettingsMobile(true)}
+                    className="inline-flex flex-col justify-center bg-white/15 rounded-2xl px-4 py-3 min-w-[150px] text-left hover:bg-white/25 transition text-white"
+                  >
+                    <span className="font-semibold">Configurações</span>
+                    <span className="text-xs opacity-80">Abrir painel</span>
+                  </button>
+                  <button
+                    onClick={() => setShowSplash(true)}
+                    className="inline-flex flex-col justify-center bg-purple-600/90 rounded-2xl px-4 py-3 min-w-[140px] text-left hover:bg-purple-700 transition text-white"
+                  >
+                    <span className="font-semibold flex items-center gap-1"><HelpCircle size={14}/> Ajuda</span>
+                    <span className="text-xs opacity-80">Como usar</span>
+                  </button>
+                  <button
+                    onClick={handleOpenBannerConfig}
+                    className="inline-flex flex-col justify-center bg-orange-500/90 rounded-2xl px-4 py-3 min-w-[140px] text-left hover:bg-orange-600 transition text-white"
+                  >
+                    <span className="font-semibold flex items-center gap-1"><ImageIcon size={14}/> Banner</span>
+                    <span className="text-xs opacity-80">Configurar</span>
+                  </button>
+                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[140px] text-left">
+                    <span className="font-semibold">Balões Restantes</span>
+                    <span className="text-lg font-bold">{balloonCount - Object.keys(poppedBalloons).length}</span>
+                  </div>
+                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[120px] text-left">
+                    <span className="font-semibold">Estourados</span>
+                    <span className="text-lg font-bold">{Object.keys(poppedBalloons).length}</span>
+                  </div>
                 </div>
-                <div className="bg-white/10 backdrop-blur-lg px-6 py-3 rounded-full border border-white/20">
-                  <span className="text-sm opacity-70">Estourados: </span>
-                  <span className="font-bold text-lg">{Object.keys(poppedBalloons).length}</span>
-                </div>
-              </div>
+              )}
             </div>
           </main>
         </div>
