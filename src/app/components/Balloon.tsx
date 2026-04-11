@@ -175,6 +175,8 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
               style={{
                 width: 'calc(var(--balloon-size, 128px) * 0.9)',
                 height: 'calc(var(--balloon-height, 160px) * 0.85)',
+                fontSize: 'clamp(16px, 5vw, 22px)',
+                lineHeight: 1.1,
                 background: isHighlighted 
                   ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' // Amarelo (mesmo do box Ganhador)
                   : 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)', // Verde

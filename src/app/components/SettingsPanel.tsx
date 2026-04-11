@@ -112,7 +112,7 @@ export function SettingsPanel({
 
   return (
     <div
-      className={`${widthClass} h-full p-4 sm:p-6 overflow-y-auto ${className ?? ''}`}
+      className={`${widthClass} h-full p-3 sm:p-6 overflow-hidden ${className ?? ''}`}
       style={{
         background: 'rgba(255, 255, 255, 0.05)',
         backdropFilter: 'blur(20px)',
@@ -121,158 +121,162 @@ export function SettingsPanel({
         ...style,
       }}
     >
-      <h2 className="text-2xl font-bold text-white mb-6">Configurações</h2>
+      <h2 className="hidden sm:block text-2xl font-bold text-white mb-4">Configurações</h2>
 
-      {/* Number of balloons */}
-      <div className="mb-6">
-        <label className="block text-white text-sm font-medium mb-2">
-          Número de Balões
-        </label>
-        <input
-          type="number"
-          min="1"
-          max="50"
-          value={balloonCount}
-          onChange={(e) => setBalloonCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
-          className="w-full px-4 py-2 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20"
-        />
-      </div>
-
-      {/* Single color toggle */}
-      <div className="mb-6">
-        <label className="flex items-center justify-between text-white text-sm font-medium cursor-pointer">
-          <span>Cor Única</span>
-          <button
-            onClick={() => setSingleColor(!singleColor)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              singleColor ? 'bg-green-500' : 'bg-gray-600'
-            }`}
-          >
-            <div
-              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                singleColor ? 'translate-x-6' : 'translate-x-0'
-              }`}
+      <div className="flex flex-col h-full overflow-hidden space-y-4 sm:space-y-6">
+        <div className="flex-1 overflow-y-auto pr-1 space-y-4 sm:space-y-6">
+          {/* Number of balloons */}
+          <div className="space-y-2">
+            <label className="block text-white text-sm font-medium">
+              Número de Balões
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="50"
+              value={balloonCount}
+              onChange={(e) => setBalloonCount(Math.max(1, Math.min(50, parseInt(e.target.value) || 1)))}
+              className="w-full px-3 py-2 rounded-lg bg-white/10 text-white border border-white/20 focus:outline-none focus:border-white/40 focus:ring-2 focus:ring-white/20 text-base"
             />
-          </button>
-        </label>
-      </div>
-
-      {/* Sound effects toggle */}
-      <div className="mb-6">
-        <label className="flex items-center justify-between text-white text-sm font-medium cursor-pointer">
-          <span className="flex items-center gap-2">
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-            Efeitos Sonoros
-          </span>
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`relative w-12 h-6 rounded-full transition-colors ${
-              soundEnabled ? 'bg-green-500' : 'bg-gray-600'
-            }`}
-          >
-            <div
-              className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
-                soundEnabled ? 'translate-x-6' : 'translate-x-0'
-              }`}
-            />
-          </button>
-        </label>
-      </div>
-
-      {/* Prize management */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
-          <label className="text-white text-sm font-medium">
-            Prêmios
-          </label>
-          <div className="flex items-center gap-2">
-            <div className="text-xs text-white/70">
-              Total: {getTotalSelectedCount()}
-            </div>
-            <button
-              onClick={handleOpenAddPrize}
-              className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1 transition-colors"
-              title="Adicionar novo prêmio"
-            >
-              <Plus size={16} />
-            </button>
           </div>
-        </div>
-        <div className="space-y-2 max-h-64 overflow-y-auto pr-2 custom-scrollbar">
-          {Object.keys(prizeSelections).map((prize) => (
-            <div
-              key={prize}
-              className="flex items-center justify-between text-white text-sm hover:bg-white/5 p-2 rounded transition-colors group"
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <span className="font-medium truncate" title={prize}>{prize}</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleOpenEditPrize(prize)}
-                    className="text-blue-400 hover:text-blue-300 transition-colors"
-                    title="Editar prêmio"
-                  >
-                    <Edit2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDeletePrize(prize)}
-                    className="text-red-400 hover:text-red-300 transition-colors"
-                    title="Deletar prêmio"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+
+          {/* Single color toggle */}
+          <div className="space-y-2">
+            <label className="flex items-center justify-between text-white text-sm font-medium cursor-pointer">
+              <span>Cor Única</span>
+              <button
+                onClick={() => setSingleColor(!singleColor)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  singleColor ? 'bg-green-500' : 'bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                    singleColor ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+
+          {/* Sound effects toggle */}
+          <div className="space-y-2">
+            <label className="flex items-center justify-between text-white text-sm font-medium cursor-pointer">
+              <span className="flex items-center gap-2">
+                {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+                Efeitos Sonoros
+              </span>
+              <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className={`relative w-12 h-6 rounded-full transition-colors ${
+                  soundEnabled ? 'bg-green-500' : 'bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                    soundEnabled ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </label>
+          </div>
+
+          {/* Prize management */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-white text-sm font-medium">
+                Prêmios
+              </label>
+              <div className="flex items-center gap-2">
+                <div className="text-xs text-white/70">
+                  Total: {getTotalSelectedCount()}
                 </div>
-              </div>
-              <div className="flex items-center gap-2 bg-white/10 rounded-full px-2 py-1 ml-2">
                 <button
-                  onClick={() => decrementPrize(prize)}
-                  className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                  disabled={!prizeSelections[prize] || prizeSelections[prize] === 0}
-                >
-                  <Minus size={16} />
-                </button>
-                <span className="min-w-[24px] text-center font-bold">{prizeSelections[prize] || 0}</span>
-                <button
-                  onClick={() => incrementPrize(prize)}
-                  className="text-green-400 hover:text-green-300 transition-colors"
+                  onClick={handleOpenAddPrize}
+                  className="bg-green-500 hover:bg-green-600 text-white rounded-full p-1 transition-colors"
+                  title="Adicionar novo prêmio"
                 >
                   <Plus size={16} />
                 </button>
               </div>
             </div>
-          ))}
+            <div className="space-y-2 max-h-56 sm:max-h-64 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+              {Object.keys(prizeSelections).map((prize) => (
+                <div
+                  key={prize}
+                  className="flex items-center justify-between text-white text-sm hover:bg-white/5 p-2 rounded transition-colors group"
+                >
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="font-medium truncate" title={prize}>{prize}</span>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleOpenEditPrize(prize)}
+                        className="text-blue-400 hover:text-blue-300 transition-colors"
+                        title="Editar prêmio"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDeletePrize(prize)}
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                        title="Deletar prêmio"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-1 ml-2">
+                    <button
+                      onClick={() => decrementPrize(prize)}
+                      className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      disabled={!prizeSelections[prize] || prizeSelections[prize] === 0}
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="min-w-[20px] text-center font-bold text-sm">{prizeSelections[prize] || 0}</span>
+                    <button
+                      onClick={() => incrementPrize(prize)}
+                      className="text-green-400 hover:text-green-300 transition-colors"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions sticky */}
+        <div className="sticky bottom-0 pt-2 pb-3 sm:pb-0 space-y-3 bg-slate-900/90 backdrop-blur">
+          <button
+            onClick={onReset}
+            disabled={isShuffling}
+            className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden disabled:opacity-80 disabled:cursor-not-allowed text-base"
+          >
+            {isShuffling && (
+              <div 
+                className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-75"
+                style={{ 
+                  width: `${shuffleProgress}%`,
+                  transformOrigin: 'left'
+                }}
+              />
+            )}
+            <span className="relative z-10">
+              {isShuffling ? '🎲 Sorteando...' : 'Sortear !'}
+            </span>
+          </button>
+
+          <button
+            onClick={onScreenshot}
+            className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 flex items-center justify-center text-base"
+          >
+            <User size={18} className="mr-2" />
+            Dados do Ganhador
+          </button>
         </div>
       </div>
-
-      {/* Reset button */}
-      <button
-        onClick={onReset}
-        disabled={isShuffling}
-        className="w-full py-3 px-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 relative overflow-hidden disabled:opacity-80 disabled:cursor-not-allowed"
-      >
-        {/* Progress bar */}
-        {isShuffling && (
-          <div 
-            className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-orange-500 transition-all duration-75"
-            style={{ 
-              width: `${shuffleProgress}%`,
-              transformOrigin: 'left'
-            }}
-          />
-        )}
-        <span className="relative z-10">
-          {isShuffling ? '🎲 Sorteando...' : 'Sortear !'}
-        </span>
-      </button>
-
-      {/* Screenshot button */}
-      <button
-        onClick={onScreenshot}
-        className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 mt-4 flex items-center justify-center"
-      >
-        <User size={18} className="mr-2" />
-        Dados do Ganhador
-      </button>
 
       {/* Prize Modal */}
       {showPrizeModal && (
