@@ -68,10 +68,10 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
             className="relative cursor-pointer"
             initial={{ scale: 0.3, opacity: 0 }}
             animate={{
-              scale: isHovered ? 1.1 : 1,
+              scale: wiggle ? (isHovered ? 1.1 : 1) : 1,
               opacity: 1,
-              y: [0, -10 * wiggle, 0],
-              rotate: [-2 * wiggle, 2 * wiggle, -2 * wiggle],
+              y: wiggle ? [0, -10, 0] : [0, 0, 0],
+              rotate: wiggle ? [-2, 2, -2] : [0, 0, 0],
             }}
             exit={{
               scale: 0,

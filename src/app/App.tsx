@@ -123,6 +123,7 @@ export default function App() {
     pixKey: ''
   });
   const [showSettingsMobile, setShowSettingsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [shuffleProgress, setShuffleProgress] = useState(0);
   const [shufflingColors, setShufflingColors] = useState<string[]>([]);
@@ -135,6 +136,13 @@ export default function App() {
       setCurrentDateTime(new Date());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Track viewport size
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   // Fetch IP address
@@ -547,7 +555,7 @@ export default function App() {
       {/* Main App */}
       <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
         {/* Timestamp and IP info - top left */}
-        <div className="fixed top-4 left-4 z-40 bg-white/10 backdrop-blur-lg px-4 py-2 rounded-lg border border-white/20 text-white text-xs shadow-xl">
+        <div className="hidden lg:block fixed top-4 left-4 z-40 bg-white/10 backdrop-blur-lg px-4 py-2 rounded-lg border border-white/20 text-white text-xs shadow-xl">
           <div className="font-semibold mb-1">📅 {currentDateTime.toLocaleDateString('pt-BR', { 
             day: '2-digit', 
             month: '2-digit', 
@@ -576,7 +584,7 @@ export default function App() {
         {/* Banner Config button - top right, next to Help */}
         <button
           onClick={handleOpenBannerConfig}
-          className="fixed top-4 right-16 z-40 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
+          className="hidden lg:flex fixed top-4 right-16 z-40 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
           title="Configurar Banner"
         >
           <ImageIcon size={20} />
@@ -620,6 +628,48 @@ export default function App() {
                       <span className="font-semibold">PIX:</span> {winnerInfo.pixKey}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* Mobile control bar under banner */}
+              {isMobile && (
+                <div className="mt-4 grid grid-cols-2 gap-3 text-white text-sm">
+                  <div className="col-span-2 bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
+                    <div className="font-semibold text-xs opacity-80">Data & IP</div>
+                    <div className="text-sm">
+                      {currentDateTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {currentDateTime.toLocaleTimeString('pt-BR')}
+                    </div>
+                    <div className="text-xs opacity-80">IP: {ipAddress}</div>
+                  </div>
+                  <button
+                    onClick={() => setShowSettingsMobile(true)}
+                    className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left hover:bg-white/15 transition"
+                  >
+                    <div className="font-semibold">Configurações</div>
+                    <div className="text-xs opacity-80">Abrir painel</div>
+                  </button>
+                  <button
+                    onClick={() => setShowSplash(true)}
+                    className="bg-purple-600/90 rounded-xl px-3 py-2 text-left hover:bg-purple-700 transition"
+                  >
+                    <div className="font-semibold flex items-center gap-1"><HelpCircle size={14}/> Ajuda</div>
+                    <div className="text-xs opacity-80">Como usar</div>
+                  </button>
+                  <button
+                    onClick={handleOpenBannerConfig}
+                    className="bg-orange-500/90 rounded-xl px-3 py-2 text-left hover:bg-orange-600 transition"
+                  >
+                    <div className="font-semibold flex items-center gap-1"><ImageIcon size={14}/> Banner</div>
+                    <div className="text-xs opacity-80">Configurar</div>
+                  </button>
+                  <div className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
+                    <div className="font-semibold">Balões Restantes</div>
+                    <div className="text-lg font-bold">{balloonCount - Object.keys(poppedBalloons).length}</div>
+                  </div>
+                    <div className="bg-white/10 border border-white/15 rounded-xl px-3 py-2 text-left">
+                    <div className="font-semibold">Estourados</div>
+                    <div className="text-lg font-bold">{Object.keys(poppedBalloons).length}</div>
+                  </div>
                 </div>
               )}
             </div>
