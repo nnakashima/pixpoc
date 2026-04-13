@@ -377,7 +377,7 @@ export default function App() {
 
       <div className={`min-h-screen ${bgStyle} ${textClass}`}>
         {/* Header */}
-        <header className={`sticky top-0 z-30 ${headerClass}`}>
+        <header className={`sticky top-0 z-30 ${headerClass} bg-transparent border-none shadow-none`}>
           <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-3">
             <img src="/logo-pixpoc.png" alt="PixPoc" className="h-16 w-auto" />
             <button
