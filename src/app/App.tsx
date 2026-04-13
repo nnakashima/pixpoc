@@ -158,10 +158,7 @@ export default function App() {
   const [isRolling, setIsRolling] = useState(false);
   const [rollTick, setRollTick] = useState(0);
   const [singleColorIndex, setSingleColorIndex] = useState(0);
-  const [showWizard, setShowWizard] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return true;
-    return localStorage.getItem('pixpoc_wizard_done') !== 'true';
-  });
+  const [showWizard, setShowWizard] = useState<boolean>(false);
   const [wizardItems, setWizardItems] = useState('R$ 0,00\nR$ 5,00\nR$ 10,00');
   const [wizardBalloonCount, setWizardBalloonCount] = useState(12);
 
@@ -448,46 +445,6 @@ export default function App() {
         <main className="max-w-6xl mx-auto px-4 pb-10 space-y-4">
           {activeTab === 'config' && (
             <section className={`${panelClass} rounded-2xl p-3 sm:p-4 space-y-4 max-h-[70vh] min-h-[40vh] overflow-auto sm:max-h-none`}>
-          {showWizard && (
-            <div className="bg-slate-50 text-slate-800 border border-slate-200 rounded-xl p-4 space-y-3">
-              <h3 className="text-base font-semibold">{t('wizardTitle')}</h3>
-              <label className="flex flex-col text-sm gap-1">
-                {t('wizardCount')}
-                <input
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={wizardBalloonCount}
-                  onChange={(e) => setWizardBalloonCount(parseInt(e.target.value) || 1)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </label>
-              <label className="flex flex-col text-sm gap-1">
-                {t('wizardItems')}
-                <textarea
-                  value={wizardItems}
-                  onChange={(e) => setWizardItems(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                />
-              </label>
-              <div className="flex flex-wrap gap-2 justify-end text-sm">
-                <button
-                  onClick={() => { setShowWizard(false); localStorage.setItem('pixpoc_wizard_done','true'); }}
-                  className="bg-slate-200 text-slate-700 hover:bg-slate-300 px-4 py-2 rounded-lg transition"
-                >
-                  {t('wizardSkip')}
-                </button>
-                <button
-                  onClick={applyWizard}
-                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg shadow hover:shadow-lg"
-                >
-                  {t('wizardApply')}
-                </button>
-              </div>
-            </div>
-          )}
-
               <div className="space-y-3 text-sm text-slate-700">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{t('prizesTitle')}</span>
