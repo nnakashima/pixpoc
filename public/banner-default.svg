@@ -1,11 +1,53 @@
-<!-- Placeholder SVG: 1200x150 Banner -->
-<svg width="1200" height="150" xmlns="http://www.w3.org/2000/svg">
+<svg width="1200" height="150" viewBox="0 0 1200 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background gradient -->
   <defs>
-    <linearGradient id="bannerGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6B46C1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#9333EA;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#DB2777;stop-opacity:1" />
     </linearGradient>
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B6B;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFD93D;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.3"/>
+    </filter>
   </defs>
-  <rect width="1200" height="150" fill="url(#bannerGrad)"/>
-  <text x="600" y="85" font-family="Arial, sans-serif" font-size="48" font-weight="bold" fill="white" text-anchor="middle">🎈 PixPoc - Sorteios</text>
+  
+  <!-- Background -->
+  <rect width="1200" height="150" fill="url(#bgGradient)" rx="12"/>
+  
+  <!-- Decorative balloons -->
+  <ellipse cx="80" cy="60" rx="22" ry="28" fill="#FF6B6B" opacity="0.6" filter="url(#shadow)"/>
+  <path d="M 80 88 Q 78 95 80 105" stroke="#FF6B6B" stroke-width="2" fill="none" opacity="0.6"/>
+  <circle cx="80" cy="55" r="7" fill="#FFE5E5" opacity="0.4"/>
+  
+  <ellipse cx="1120" cy="70" rx="20" ry="26" fill="#4ECDC4" opacity="0.6" filter="url(#shadow)"/>
+  <path d="M 1120 96 Q 1118 103 1120 112" stroke="#4ECDC4" stroke-width="2" fill="none" opacity="0.6"/>
+  <circle cx="1120" cy="66" r="6" fill="#E5FFFD" opacity="0.4"/>
+  
+  <ellipse cx="150" cy="90" rx="18" ry="24" fill="#FFA07A" opacity="0.5" filter="url(#shadow)"/>
+  <path d="M 150 114 Q 148 120 150 128" stroke="#FFA07A" stroke-width="2" fill="none" opacity="0.5"/>
+  
+  <ellipse cx="1050" cy="50" rx="19" ry="25" fill="#BB8FCE" opacity="0.5" filter="url(#shadow)"/>
+  <path d="M 1050 75 Q 1048 82 1050 92" stroke="#BB8FCE" stroke-width="2" fill="none" opacity="0.5"/>
+  
+  <!-- Main content container -->
+  <g transform="translate(220, 75)">
+    <!-- Logo "PixPoc" -->
+    <text x="0" y="0" font-family="Arial, sans-serif" font-size="56" font-weight="900" fill="#FFFFFF" filter="url(#shadow)">
+      PixPoc
+    </text>
+    
+    <!-- Slogan -->
+    <text x="250" y="-5" font-family="Arial, sans-serif" font-size="32" font-weight="700" fill="#FFD93D" filter="url(#shadow)">
+      Estourando a Boca do Balão!
+    </text>
+  </g>
+  
+  <!-- Decorative star accents -->
+  <path d="M 730 30 l 3 9 l 9 0 l -7 5 l 3 9 l -8 -6 l -8 6 l 3 -9 l -7 -5 l 9 0 z" fill="#FFD93D" opacity="0.8"/>
+  <path d="M 780 110 l 2 6 l 6 0 l -5 3 l 2 6 l -5 -4 l -5 4 l 2 -6 l -5 -3 l 6 0 z" fill="#FFFFFF" opacity="0.6"/>
+  <path d="M 190 35 l 2 6 l 6 0 l -5 3 l 2 6 l -5 -4 l -5 4 l 2 -6 l -5 -3 l 6 0 z" fill="#FFD93D" opacity="0.7"/>
 </svg>

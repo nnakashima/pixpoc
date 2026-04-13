@@ -249,7 +249,8 @@ export default function App() {
     }
   }, [bannerConfig.imageUrl, bannerConfig.altText]);
 
-  const t = (key: keyof typeof MESSAGES['pt-BR']) => MESSAGES[language === 'en-US' ? 'en-US' : 'pt-BR'][key];
+  const t = (key: keyof typeof MESSAGES['pt-BR']) =>
+    (MESSAGES as any)[language]?.[key] ?? MESSAGES['pt-BR'][key];
 
   const applyWizard = () => {
     if (wizardItemsArray.length > 0) {
@@ -445,7 +446,7 @@ export default function App() {
 
         <main className="max-w-6xl mx-auto px-4 pb-10 space-y-4">
           {activeTab === 'config' && (
-            <section className={`${panelClass} rounded-2xl p-3 sm:p-4 space-y-4 max-h-[75vh] overflow-auto sm:max-h-none`}>
+            <section className={`${panelClass} rounded-2xl p-3 sm:p-4 space-y-4 max-h-[70vh] min-h-[40vh] overflow-auto sm:max-h-none`}>
           {showWizard && (
             <div className="bg-slate-50 text-slate-800 border border-slate-200 rounded-xl p-4 space-y-3">
               <h3 className="text-base font-semibold">{t('wizardTitle')}</h3>
@@ -634,7 +635,7 @@ export default function App() {
           )}
 
           {activeTab === 'winner' && (
-            <section className={`${panelClass} rounded-2xl p-4 space-y-4 max-h-[75vh] overflow-auto sm:max-h-none`}>
+            <section className={`${panelClass} rounded-2xl p-4 space-y-4 max-h-[70vh] min-h-[40vh] overflow-auto sm:max-h-none`}>
               <h2 className="text-lg font-bold flex items-center gap-2 text-amber-700">🏆 {t('winnerTitle')}</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <label className="flex flex-col gap-1">
