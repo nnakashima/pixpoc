@@ -635,13 +635,13 @@ export default function App() {
             </section>
           )}
 
-            <section className={`${cardSoftBg} rounded-2xl shadow-lg p-4`}>
+            <section className={`rounded-2xl p-4 ${isDark ? '' : ''}`}>
             <div
               className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 justify-items-center"
               style={{
-                gap: 'clamp(14px, 1.4vw, 22px)',
-                ['--balloon-size' as any]: 'clamp(140px, 12vw, 210px)',
-                ['--balloon-height' as any]: 'clamp(175px, 15vw, 260px)',
+                gap: 'clamp(12px, 1.2vw, 20px)',
+                ['--balloon-size' as any]: 'clamp(126px, 10.8vw, 190px)', // ~-10% no mobile
+                ['--balloon-height' as any]: 'clamp(158px, 13.5vw, 234px)',
               }}
             >
               {balloons.map((b, idx) => (
