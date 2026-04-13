@@ -182,7 +182,7 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
                 fontSize: 'clamp(14px, 4vw, 18px)',
                 lineHeight: 1.15,
                 background: currency?.imageUrl
-                  ? `url(${currency.imageUrl}) center/cover`
+                  ? `url("${encodeURI(currency.imageUrl)}") center/cover`
                   : isHighlighted
                     ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
                     : 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',

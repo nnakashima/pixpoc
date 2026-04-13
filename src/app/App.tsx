@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Balloon } from './components/Balloon';
 import { SplashScreen } from './components/SplashScreen';
 import { BannerConfigModal } from './components/BannerConfigModal';
+import { secureArrayShuffle } from './utils/randomUtils';
 import { AlertTriangle, HelpCircle, Dice5, Plus, Trash2, Upload } from 'lucide-react';
 
 const BALLOON_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
@@ -16,6 +17,10 @@ const MESSAGES = {
     wizardSkip: 'Pular',
     wizardApply: 'Aplicar e continuar',
     prizesTitle: 'Prêmios (item, descrição, qtd, imagem)',
+    tableItem: 'Item',
+    tableDescription: 'Descrição',
+    tableQty: 'Qtde',
+    tableImage: 'Imagem',
     add: 'Adicionar',
     singleColor: 'Cor única dos balões',
     sound: 'Som',
@@ -50,6 +55,10 @@ const MESSAGES = {
     wizardSkip: 'Skip',
     wizardApply: 'Apply and continue',
     prizesTitle: 'Prizes (item, description, qty, image)',
+    tableItem: 'Item',
+    tableDescription: 'Description',
+    tableQty: 'Qty',
+    tableImage: 'Image',
     add: 'Add',
     singleColor: 'Single balloon color',
     sound: 'Sound',
@@ -124,26 +133,25 @@ function createModernBanner(text: string, subtitle = ''): string {
   return canvas.toDataURL('image/png');
 }
 
-function secureShuffle<T>(arr: T[]) {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+// Wrapper garante fallback em ambientes sem Web Crypto (SSR / testes)
+const safeShuffle = <T,>(arr: T[]) => {
+  try {
+    return secureArrayShuffle(arr);
+  } catch {
+    // Fallback não criptográfico apenas para não quebrar build/teste
+    return [...arr].sort(() => Math.random() - 0.5);
   }
-  return a;
-}
+};
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'config' | 'winner' | null>(null);
   const [popped, setPopped] = useState<Record<number, { label: string; imageUrl?: string } | undefined>>({});
   const [prizes, setPrizes] = useState<PrizeItem[]>([
-    { id: 1, description: 'R$ 10', qty: 1 },
-    { id: 2, description: 'R$ 20', qty: 1 },
-    { id: 3, description: 'R$ 50', qty: 1 },
-    { id: 4, description: 'R$ 100', qty: 1 },
-    { id: 5, description: 'Brinde Coca-Cola', qty: 2 },
-    { id: 6, description: 'Brinde Subway', qty: 2 },
-    { id: 7, description: 'Camisa Proselling', qty: 1 },
+    { id: 1, description: 'Valor', qty: 2, image: '/valor.png' },
+    { id: 2, description: 'Pontos', qty: 2, image: '/pontos.png' },
+    { id: 3, description: 'Brinde', qty: 2, image: '/brinde.png' },
+    { id: 4, description: 'Pessoa', qty: 2, image: '/pessoa.png' },
+    { id: 5, description: 'Texto', qty: 1, image: '/texto.png' },
   ]);
   const [sound, setSound] = useState(true);
   const [singleColor, setSingleColor] = useState(false);
@@ -161,6 +169,7 @@ export default function App() {
   const [showWizard, setShowWizard] = useState<boolean>(false);
   const [wizardItems, setWizardItems] = useState('R$ 0,00\nR$ 5,00\nR$ 10,00');
   const [wizardBalloonCount, setWizardBalloonCount] = useState(12);
+  const [publicIp, setPublicIp] = useState<string>('');
 
   const wizardItemsArray = useMemo(
     () => wizardItems.split(/\r?\n/).map((t) => t.trim()).filter(Boolean),
@@ -179,7 +188,7 @@ export default function App() {
   }, [prizes]);
 
   // Embaralha a lista de prêmios a cada nova rodada ou alteração
-  const shuffledPrizes = useMemo(() => secureShuffle(expandedPrizes), [expandedPrizes, shuffleSeed]);
+  const shuffledPrizes = useMemo(() => safeShuffle(safeShuffle(expandedPrizes)), [expandedPrizes, shuffleSeed]);
 
   const balloonCount = expandedPrizes.length;
 
@@ -195,10 +204,10 @@ export default function App() {
         colors = Array(balloonCount).fill(BALLOON_COLORS[singleColorIndex % BALLOON_COLORS.length]);
       }
     } else {
-      colors = secureShuffle(
+      colors = safeShuffle(
         Array.from({ length: Math.max(balloonCount, 1) }, (_, i) => BALLOON_COLORS[i % BALLOON_COLORS.length])
       );
-      if (isRolling) colors = secureShuffle(colors);
+      if (isRolling) colors = safeShuffle(safeShuffle(colors));
     }
     return Array.from({ length: balloonCount || 0 }, (_, i) => ({ id: i + 1, color: colors[i] }));
   }, [balloonCount, singleColor, isRolling, rollTick]);
@@ -237,14 +246,28 @@ export default function App() {
     document.head.appendChild(style);
   }, []);
 
-  // Gera um banner padrão estilizado caso não exista imagem definida
+  // Busca IP público para exibir/auditar
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    let cancelled = false;
+    const fetchIp = async () => {
+      try {
+        const res = await fetch('https://api.ipify.org?format=json');
+        const data = await res.json();
+        if (!cancelled && data?.ip) setPublicIp(data.ip);
+      } catch (e) {
+        /* silencioso */
+      }
+    };
+    fetchIp();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Banner default agora mostra apenas o texto sobre fundo transparente (sem imagem gerada)
+  useEffect(() => {
     if (bannerConfig.imageUrl) return;
-    const dataUrl = createModernBanner(bannerConfig.altText || DEFAULT_BANNER_TEXT);
-    if (dataUrl) {
-      setBannerConfig((prev) => ({ ...prev, imageUrl: dataUrl }));
-    }
+    setBannerConfig((prev) => ({ ...prev, altText: prev.altText || DEFAULT_BANNER_TEXT }));
   }, [bannerConfig.imageUrl, bannerConfig.altText]);
 
   const t = (key: keyof typeof MESSAGES['pt-BR']) =>
@@ -340,6 +363,7 @@ export default function App() {
     const lines = [
       'PixPoc - Relatório de Ganhador',
       `Data/Hora: ${now.toLocaleString(language)}`,
+      `IP: ${publicIp || '-'}`,
       `Nome: ${winner.name || '-'}`,
       `Prêmio: ${winner.prize || '-'}`,
       `Contato: ${winner.contact || '-'}`,
@@ -370,23 +394,30 @@ export default function App() {
   const headerClass = isDark ? 'backdrop-blur bg-slate-900/85 border-b border-slate-800 shadow-lg' : 'backdrop-blur bg-white/90 border-b border-slate-200 shadow-sm';
   const navActive = isDark ? 'bg-slate-800 text-white border-slate-600 shadow' : 'bg-white text-slate-900 border-slate-300 shadow';
   const navInactive = isDark ? 'bg-slate-800/50 text-slate-200 border-transparent hover:border-slate-600' : 'bg-white/70 text-slate-700 border-transparent hover:border-slate-200';
+  const bannerButtonClass = isDark
+    ? 'bg-transparent border-slate-700 hover:border-slate-600 shadow-none'
+    : 'bg-white border-slate-200 hover:border-slate-300 shadow-inner';
 
   return (
     <>
-      {showSplash && <SplashScreen onStart={() => setShowSplash(false)} />}
+      {showSplash && <SplashScreen onStart={() => setShowSplash(false)} language={language as 'pt-BR' | 'en-US'} />}
 
       <div className={`min-h-screen ${bgStyle} ${textClass}`}>
         {/* Header */}
         <header className={`sticky top-0 z-30 ${headerClass} bg-transparent border-none shadow-none`}>
-          <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-3">
-            <img src="/logo-pixpoc.png" alt="PixPoc" className="h-16 w-auto" />
+          <div className="max-w-6xl mx-auto flex items-center gap-4 px-4 py-3">
+            <div className="flex-shrink-0 flex items-center">
+              <img src="/logo-pixpoc.png" alt="PixPoc" className="h-24 sm:h-28 w-auto" />
+            </div>
             <button
               onClick={() => setShowBannerModal(true)}
-              className="flex-1 h-14 sm:h-16 rounded-xl border border-slate-200 shadow-inner overflow-hidden relative focus:outline-none hover:border-slate-300 transition bg-white"
+              className={`flex-1 h-14 sm:h-16 rounded-xl overflow-hidden relative focus:outline-none transition ${bannerButtonClass}`}
             >
               <div
-                className="absolute inset-0 flex items-center justify-center text-slate-700 font-semibold px-3 sm:px-4 text-center text-sm sm:text-lg md:text-xl leading-tight truncate"
-                style={bannerConfig.imageUrl ? { backgroundImage: `url(${bannerConfig.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                className="absolute inset-0 flex items-center justify-center text-slate-700 font-semibold px-3 sm:px-4 text-center text-lg sm:text-2xl md:text-3xl leading-tight truncate"
+                style={bannerConfig.imageUrl
+                  ? { backgroundImage: `url(${bannerConfig.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                  : { backgroundColor: 'transparent', color: isDark ? '#e2e8f0' : undefined }}
                 title={!bannerConfig.imageUrl ? (bannerConfig.altText || DEFAULT_BANNER_TEXT) : undefined}
               >
                 {!bannerConfig.imageUrl && (bannerConfig.altText || t('bannerDefault'))}
@@ -413,7 +444,7 @@ export default function App() {
               </button>
               <button
                 onClick={() => setShowSplash(true)}
-                className="p-2 rounded-lg bg-yellow-400 text-slate-900 shadow-md hover:shadow-lg active:scale-95"
+                className="p-3 rounded-full bg-yellow-400 text-slate-900 shadow-md hover:shadow-lg active:scale-95 border border-yellow-500"
                 title="Ajuda"
               >
                 <HelpCircle size={18} />
@@ -439,6 +470,11 @@ export default function App() {
                 <span className="capitalize">{tab.label}</span>
               </button>
             ))}
+            <div className="flex-1 flex items-center justify-end text-[11px] font-normal pr-1">
+              <span className={`${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                Total: {Object.keys(popped).length}/{balloonCount}
+              </span>
+            </div>
           </nav>
         </header>
 
@@ -453,7 +489,7 @@ export default function App() {
                     onClick={() => setPrizes((prev) => [...prev, { id: (prev.at(-1)?.id || 0) + 1, description: '', qty: 1 }])}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs shadow hover:shadow-md"
                   >
-                    <Plus size={14} /> Adicionar
+                    <Plus size={14} />
                   </button>
                 </div>
 
@@ -461,10 +497,10 @@ export default function App() {
                   <table className="w-full text-xs sm:text-sm">
                     <thead className={isDark ? 'bg-slate-800 text-slate-200 uppercase text-[11px]' : 'bg-slate-100 text-slate-600 uppercase text-[11px]'}>
                       <tr>
-                        <th className="px-2 py-2 text-left">Item</th>
-                        <th className="px-2 py-2 text-left">Descrição</th>
-                        <th className="px-2 py-2 text-left">Qtde</th>
-                        <th className="px-2 py-2 text-left">Imagem</th>
+                        <th className="px-2 py-2 text-left">{t('tableItem')}</th>
+                        <th className="px-2 py-2 text-left">{t('tableDescription')}</th>
+                        <th className="px-2 py-2 text-left">{t('tableQty')}</th>
+                        <th className="px-2 py-2 text-left">{t('tableImage')}</th>
                         <th className="px-2 py-2"></th>
                       </tr>
                     </thead>
@@ -620,7 +656,7 @@ export default function App() {
                 </div>
                 <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800/70 border-slate-600' : 'bg-amber-50 border border-amber-200'}`}>
                   <div className="font-semibold">{t('ip')}</div>
-                  <div className="truncate">(collect via external service)</div>
+                  <div className="truncate">{publicIp || '...'}</div>
                 </div>
                 <div className={`p-3 rounded-lg flex flex-col gap-1 ${isDark ? 'bg-slate-800/70 border-slate-600' : 'bg-amber-50 border border-amber-200'}`}>
                   <div className="font-semibold">{t('audit')}</div>
@@ -658,10 +694,6 @@ export default function App() {
                   disableFloat
                 />
               ))}
-            </div>
-            <div className={`mt-4 flex flex-wrap gap-2 text-xs ${isDark ? 'text-white' : 'text-slate-600'}`}>
-              <span className={`px-3 py-1 rounded-full ${badgeClass}`}>{t('statsRemaining')}: {balloonCount - Object.keys(popped).length}</span>
-              <span className={`px-3 py-1 rounded-full ${badgeClass}`}>{t('statsPopped')}: {Object.keys(popped).length}</span>
             </div>
           </section>
         </main>

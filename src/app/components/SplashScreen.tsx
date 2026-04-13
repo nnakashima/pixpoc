@@ -6,9 +6,34 @@ const pixpocLogo = '/logo-pixpoc.png';
 
 interface SplashScreenProps {
   onStart: () => void;
+  language?: 'pt-BR' | 'en-US';
 }
 
-export function SplashScreen({ onStart }: SplashScreenProps) {
+const COPY = {
+  'pt-BR': {
+    title: '✨ Passo a passo',
+    steps: [
+      { title: 'Monte os prêmios e banner', body: 'Ajuste quantidades e imagens na tabela de prêmios. Clique no banner para editar.' },
+      { title: 'Sortear', body: 'Toque no dado para embaralhar e redefinir os balões. 100% aleatório via Web Crypto API.' },
+      { title: 'Estourar & destacar', body: 'Estoure para revelar. Toque de novo no card para destacar em amarelo e preencher o campo de prêmio.' },
+      { title: 'Registrar ganhador', body: 'Abra o painel “Ganhador”, preencha nome, contato e chave PIX e salve o relatório se quiser.' },
+    ],
+    security: 'Aleatoriedade criptográfica (Web Crypto + rejection sampling).',
+  },
+  'en-US': {
+    title: '✨ Quick steps',
+    steps: [
+      { title: 'Set prizes and banner', body: 'Adjust quantities and images in the prize table. Tap the banner to edit.' },
+      { title: 'Shuffle', body: 'Tap the dice to shuffle and reset balloons. 100% random via Web Crypto API.' },
+      { title: 'Pop & highlight', body: 'Pop to reveal. Tap the card again to highlight in yellow and fill the prize field.' },
+      { title: 'Record winner', body: 'Open the “Winner” panel, fill name, contact and Pix key, and save the report if you want.' },
+    ],
+    security: 'Cryptographic randomness (Web Crypto + rejection sampling).',
+  },
+} as const;
+
+export function SplashScreen({ onStart, language = 'pt-BR' }: SplashScreenProps) {
+  const copy = COPY[language] || COPY['pt-BR'];
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -16,27 +41,27 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
       exit={{ opacity: 0 }}
       className="fixed inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800 z-50 flex items-center justify-center p-4 overflow-hidden"
     >
-      <div className="w-full max-w-xl h-full flex flex-col justify-center gap-3">
+      <div
+        className="w-full max-w-md h-full flex flex-col justify-center gap-1"
+        style={{ transform: 'translateY(-24px)' }}
+      >
         {/* Logo/Title */}
         <motion.div
           initial={{ scale: 0.5, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-4"
+          className="text-center mb-1"
         >
           <div className="flex justify-center mb-2">
             <img 
               src={pixpocLogo} 
               alt="PixPoc Logo" 
-              className="h-32 md:h-40 object-contain"
+              className="h-32 md:h-48 object-contain"
               style={{
                 filter: 'drop-shadow(0 0 20px rgba(255, 255, 255, 0.3)) drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5))',
               }}
             />
           </div>
-          <p className="text-white/80 text-base md:text-lg">
-            Sorteios transparentes com segurança criptográfica
-          </p>
         </motion.div>
 
         {/* Instructions Card */}
@@ -44,80 +69,38 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.2 }}
-          className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 md:p-6 border border-white/20 shadow-2xl mb-4 max-h-[65vh] overflow-y-auto"
+          className="bg-white/10 backdrop-blur-xl rounded-2xl p-4 md:p-5 border border-white/20 shadow-2xl mb-3 max-h-[65vh] overflow-y-auto"
         >
-          <h2 className="text-xl md:text-2xl font-bold text-white mb-4 text-center">
-            ✨ Como Usar
+          <h2 className="text-lg md:text-xl font-bold text-white mb-3 text-center">
+            {copy.title}
           </h2>
 
-          <div className="space-y-3">
-            {/* Step 1 */}
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                1
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Settings className="text-purple-400" size={16} />
-                  <h3 className="text-white font-bold text-sm">Configure o Sorteio</h3>
+          <div className="space-y-2.5">
+            {copy.steps.map((step, idx) => {
+              const chips = [
+                { colors: 'from-purple-500 to-pink-500', Icon: Settings },
+                { colors: 'from-blue-500 to-cyan-500', Icon: Zap },
+                { colors: 'from-green-500 to-emerald-500', Icon: Gift },
+                { colors: 'from-yellow-500 to-orange-500', Icon: Lock },
+              ];
+              const chip = chips[idx] || chips[0];
+              return (
+                <div className="flex gap-3" key={step.title}>
+                  <div className={`flex-shrink-0 w-7 h-7 rounded-full bg-gradient-to-br ${chip.colors} flex items-center justify-center text-white font-bold text-xs shadow-lg`}>
+                    {idx + 1}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <chip.Icon className="text-white/80" size={16} />
+                      <h3 className="text-white font-semibold text-sm">{step.title}</h3>
+                    </div>
+                    <p className="text-white/80 text-xs leading-snug">
+                      {step.body}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-white/80 text-xs">
-                  No painel lateral direito, defina a <strong>quantidade de balões</strong> e gerencie os <strong>prêmios</strong>:
-                  adicione, edite ou remova itens. Use os botões <strong>+/-</strong> para ajustar as quantidades.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 2 */}
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                2
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap className="text-blue-400" size={16} />
-                  <h3 className="text-white font-bold text-sm">Inicie o Sorteio</h3>
-                </div>
-                <p className="text-white/80 text-xs">
-                  Clique no botão <strong>"Sortear!"</strong> para embaralhar os prêmios nos balões.
-                  Aguarde 1,5 segundos enquanto o sistema distribui aleatoriamente os valores.
-                </p>
-              </div>
-            </div>
-
-            {/* Step 3 */}
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                3
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Gift className="text-green-400" size={16} />
-                  <h3 className="text-white font-bold text-sm">Estoure os Balões</h3>
-                </div>
-                <p className="text-white/80 text-xs">
-                  Clique nos balões para revelar os prêmios! Após estourar, clique novamente no card verde para
-                  <strong> destacá-lo em amarelo</strong> e copiar automaticamente para o campo "Referência do Prêmio".
-                </p>
-              </div>
-            </div>
-
-            {/* Step 4 */}
-            <div className="flex gap-3">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                4
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Lock className="text-yellow-400" size={16} />
-                  <h3 className="text-white font-bold text-sm">Registre o Ganhador</h3>
-                </div>
-                <p className="text-white/80 text-xs">
-                  Clique no botão <strong>"Dados do Ganhador"</strong> para preencher nome, referência e chave PIX.
-                  Os dados aparecerão no topo da tela. Use o <strong>print nativo</strong> do seu dispositivo para capturar!
-                </p>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </motion.div>
 
@@ -126,12 +109,12 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
           initial={{ y: 30, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.4 }}
-          className="bg-green-500/20 backdrop-blur-lg rounded-xl p-3 border border-green-500/40 mb-4"
+          className="bg-green-500/15 backdrop-blur-lg rounded-xl p-3 border border-green-500/30 mb-3"
         >
-          <div className="flex items-center justify-center gap-2 text-white">
-            <Lock className="text-green-400" size={18} />
-            <p className="text-xs md:text-sm">
-              <strong>100% Transparente:</strong> Usa Web Crypto API com rejection sampling para garantir aleatoriedade sem viés
+          <div className="flex items-center justify-center gap-2 text-white text-xs">
+            <Lock className="text-green-300" size={16} />
+            <p>
+              {copy.security}
             </p>
           </div>
         </motion.div>
@@ -157,9 +140,9 @@ export function SplashScreen({ onStart }: SplashScreenProps) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, delay: 0.8 }}
-          className="text-center text-white/50 text-xs mt-3"
+          className="text-center text-white/60 text-[11px] mt-2"
         >
-          Dica: Você pode ver estas instruções novamente clicando em "(?)" no topo da página
+          Created by PixPoc 2026 - admin@pixpoc.com.br
         </motion.p>
       </div>
     </motion.div>
