@@ -1,12 +1,14 @@
 import { motion, AnimatePresence } from 'motion/react';
 import { useState } from 'react';
 
+type PrizePayload = { label: string; imageUrl?: string } | null;
+
 interface BalloonProps {
   number: number;
   color: string;
   onPop: (number: number) => void;
   isPopped: boolean;
-  currency: string | null;
+  currency: PrizePayload;
   soundEnabled: boolean;
   isHighlighted?: boolean;
   onToggleHighlight?: (number: number) => void;
@@ -179,9 +181,11 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
                 padding: '6px 10px',
                 fontSize: 'clamp(14px, 4vw, 18px)',
                 lineHeight: 1.15,
-                background: isHighlighted 
-                  ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)' // Amarelo (mesmo do box Ganhador)
-                  : 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)', // Verde
+                background: currency?.imageUrl
+                  ? `url(${currency.imageUrl}) center/cover`
+                  : isHighlighted
+                    ? 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)'
+                    : 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',
                 boxShadow: isHighlighted
                   ? '0 10px 40px rgba(251, 191, 36, 0.6), inset 0 2px 10px rgba(255, 255, 255, 0.4)'
                   : '0 10px 30px rgba(0, 0, 0, 0.5), inset 0 2px 10px rgba(255, 255, 255, 0.3)',
@@ -194,9 +198,21 @@ export function Balloon({ number, color, onPop, isPopped, currency, soundEnabled
                      wordBreak: 'break-word',
                      hyphens: 'auto',
                    }}>
-                {currency}
+                <span
+                  style={{
+                    display: 'inline-block',
+                    padding: currency?.imageUrl ? '6px 10px' : '0',
+                    borderRadius: '10px',
+                    background: currency?.imageUrl ? 'rgba(0,0,0,0.55)' : 'transparent',
+                    boxShadow: currency?.imageUrl ? '0 2px 8px rgba(0,0,0,0.35)' : undefined,
+                    color: '#fff',
+                    textShadow: currency?.imageUrl ? '0 1px 4px rgba(0,0,0,0.65)' : '0 1px 2px rgba(0,0,0,0.35)',
+                  }}
+                >
+                  {currency?.label || ''}
+                </span>
               </div>
-              
+
               {/* Indicador visual de que é clicável */}
               {isHighlighted && (
                 <div className="absolute -top-2 -right-2 bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-lg">

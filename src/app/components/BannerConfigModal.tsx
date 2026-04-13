@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Link2, Wand2, Save, Sparkles, Search } from 'lucide-react';
+import { X, Wand2, Save, Sparkles } from 'lucide-react';
 
 interface BannerConfig {
   imageUrl: string;
@@ -20,7 +20,6 @@ interface BannerConfigModalProps {
 type BannerStyle = 'modern' | 'festive' | 'minimal' | 'neon';
 
 export function BannerConfigModal({ isOpen, onClose, config, onSave }: BannerConfigModalProps) {
-  const [activeTab, setActiveTab] = useState<'url' | 'create'>('url');
   const [localConfig, setLocalConfig] = useState<BannerConfig>(config);
   const [imagePreview, setImagePreview] = useState<string>(config.imageUrl);
   
@@ -28,39 +27,19 @@ export function BannerConfigModal({ isOpen, onClose, config, onSave }: BannerCon
   const [bannerTitle, setBannerTitle] = useState('');
   const [bannerSubtitle, setBannerSubtitle] = useState('');
   const [bannerStyle, setBannerStyle] = useState<BannerStyle>('modern');
-  const [useUnsplashBg, setUseUnsplashBg] = useState(false);
-  const [unsplashImageUrl, setUnsplashImageUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Sincroniza o modal sempre que for reaberto ou o config for alterado externamente
+  useEffect(() => {
+    setLocalConfig(config);
+    setImagePreview(config.imageUrl);
+    setBannerTitle(config.altText || '');
+    setBannerSubtitle('');
+  }, [config, isOpen]);
+
   if (!isOpen) return null;
-
-  const handleUrlChange = (url: string) => {
-    setImagePreview(url);
-    setLocalConfig({ ...localConfig, imageUrl: url });
-  };
-
-  const searchUnsplash = async () => {
-    setIsSearching(true);
-    try {
-      // Usar Picsum Photos que não tem problema de CORS
-      // Gera uma imagem aleatória de 1200x150px
-      const randomId = Math.floor(Math.random() * 1000) + 1;
-      const imageUrl = `https://picsum.photos/1200/150?random=${randomId}`;
-      
-      // Adicionar um pequeno delay para dar feedback visual
-      setTimeout(() => {
-        setUnsplashImageUrl(imageUrl);
-        setIsSearching(false);
-      }, 500);
-    } catch (error) {
-      console.error('Erro ao buscar imagem:', error);
-      alert('Erro ao buscar imagem. Tente novamente.');
-      setIsSearching(false);
-    }
-  };
 
   const generateBanner = async () => {
     if (!bannerTitle.trim()) {
@@ -87,30 +66,11 @@ export function BannerConfigModal({ isOpen, onClose, config, onSave }: BannerCon
       canvas.width = 1200;
       canvas.height = 150;
 
-      // Se tiver imagem de fundo do Unsplash, carregar primeiro
-      if (useUnsplashBg && unsplashImageUrl) {
-        try {
-          const bgImg = await loadImage(unsplashImageUrl);
-          ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-          
-          // Overlay mais escuro para garantir legibilidade
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        } catch (error) {
-          console.error('Erro ao carregar imagem de fundo:', error);
-          // Se falhar, usar gradiente
-          drawGradientBackground(ctx, canvas, bannerStyle);
-          ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-      } else {
-        // Usar gradiente baseado no estilo
-        drawGradientBackground(ctx, canvas, bannerStyle);
-        
-        // Adicionar overlay para melhor legibilidade
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+      // Usar gradiente baseado no estilo
+      drawGradientBackground(ctx, canvas, bannerStyle);
+      // Overlay leve para legibilidade
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Configurar texto
       ctx.textAlign = 'center';
@@ -125,32 +85,18 @@ export function BannerConfigModal({ isOpen, onClose, config, onSave }: BannerCon
         drawStyledText(ctx, bannerSubtitle, canvas.width / 2, canvas.height / 2 + 25, bannerStyle, 'subtitle');
       }
 
-      // Adicionar decoração baseada no estilo (apenas se não tiver imagem de fundo)
-      if (!useUnsplashBg || !unsplashImageUrl) {
-        drawDecorations(ctx, canvas, bannerStyle);
-      }
+      drawDecorations(ctx, canvas, bannerStyle);
 
       // Converter para data URL
       const dataUrl = canvas.toDataURL('image/png', 1.0);
       setImagePreview(dataUrl);
-      setLocalConfig({ ...localConfig, imageUrl: dataUrl });
+      setLocalConfig({ ...localConfig, imageUrl: dataUrl, altText: bannerTitle.trim() });
     } catch (error) {
       console.error('Erro ao gerar banner:', error);
       alert('Erro ao gerar banner. Tente novamente.');
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // Helper function para carregar imagem com Promise
-  const loadImage = (url: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = url;
-    });
   };
 
   const drawGradientBackground = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, style: BannerStyle) => {
@@ -305,191 +251,65 @@ export function BannerConfigModal({ isOpen, onClose, config, onSave }: BannerCon
 
         {/* Content */}
         <div className="p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
-          {/* Banner Status */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
-            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${localConfig.isActive ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
-              <span className="font-semibold text-gray-800 text-sm">
-                Status: {localConfig.isActive ? 'Ativo' : 'Inativo'}
-              </span>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+          {/* Título / Subtítulo */}
+          <div className="space-y-3">
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Título *</label>
               <input
-                type="checkbox"
-                checked={localConfig.isActive}
-                onChange={(e) => setLocalConfig({ ...localConfig, isActive: e.target.checked })}
-                className="sr-only peer"
+                type="text"
+                value={bannerTitle}
+                onChange={(e) => setBannerTitle(e.target.value)}
+                placeholder="Ex: Estoure a Boca do Balão!"
+                maxLength={80}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
               />
-              <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
-            </label>
-          </div>
-
-          {/* Tabs */}
-          <div className="flex gap-2 border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('url')}
-              className={`flex items-center gap-2 px-4 py-2 font-semibold text-sm transition-all ${
-                activeTab === 'url'
-                  ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Link2 size={16} />
-              URL de Imagem
-            </button>
-            <button
-              onClick={() => setActiveTab('create')}
-              className={`flex items-center gap-2 px-4 py-2 font-semibold text-sm transition-all ${
-                activeTab === 'create'
-                  ? 'text-purple-600 border-b-2 border-purple-600'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              <Wand2 size={16} />
-              Criar com IA
-            </button>
-          </div>
-
-          {/* Tab Content - URL */}
-          {activeTab === 'url' && (
-            <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                <p className="text-sm text-blue-800">
-                  💡 <strong>Dica:</strong> Hospede sua imagem no Google Drive, Dropbox ou outro serviço de nuvem e copie o link público aqui.
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  🔗 URL da Imagem do Banner
-                </label>
-                <input
-                  type="url"
-                  value={localConfig.imageUrl.startsWith('data:') ? '' : localConfig.imageUrl}
-                  onChange={(e) => handleUrlChange(e.target.value)}
-                  placeholder="https://drive.google.com/..."
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
-                />
-              </div>
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 mb-1">Subtítulo (opcional)</label>
+              <input
+                type="text"
+                value={bannerSubtitle}
+                onChange={(e) => setBannerSubtitle(e.target.value)}
+                placeholder="Ex: Prêmios instantâneos"
+                maxLength={80}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
+              />
+            </div>
+          </div>
 
-          {/* Tab Content - Create */}
-          {activeTab === 'create' && (
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-lg p-3">
-                <p className="text-sm text-purple-800">
-                  ✨ <strong>Crie seu banner personalizado com Inteligência Artificial!</strong> Preencha os campos abaixo e clique em "Gerar Banner".
-                </p>
-              </div>
-
-              {/* Título */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  📝 Título do Banner *
-                </label>
-                <input
-                  type="text"
-                  value={bannerTitle}
-                  onChange={(e) => setBannerTitle(e.target.value)}
-                  placeholder="Ex: Sorteio R$ 500,00"
-                  maxLength={50}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
-                />
-              </div>
-
-              {/* Subtítulo */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  📄 Subtítulo (Opcional)
-                </label>
-                <input
-                  type="text"
-                  value={bannerSubtitle}
-                  onChange={(e) => setBannerSubtitle(e.target.value)}
-                  placeholder="Ex: Participe agora!"
-                  maxLength={50}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-gray-900"
-                />
-              </div>
-
-              {/* Estilo */}
-              <div>
-                <label className="block text-sm font-bold text-gray-700 mb-2">
-                  🎨 Estilo do Banner
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {styles.map((styleOption) => (
-                    <button
-                      key={styleOption.id}
-                      onClick={() => setBannerStyle(styleOption.id)}
-                      className={`p-3 rounded-lg border-2 transition-all text-left ${
-                        bannerStyle === styleOption.id
-                          ? 'bg-purple-100 border-purple-500'
-                          : 'bg-white border-gray-300 hover:border-purple-300'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xl">{styleOption.emoji}</span>
-                        <span className="font-semibold text-sm">{styleOption.name}</span>
-                      </div>
-                      <p className="text-xs text-gray-600">{styleOption.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Usar imagem do Unsplash */}
-              <div>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={useUnsplashBg}
-                    onChange={(e) => setUseUnsplashBg(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
-                  <span className="text-sm font-bold text-gray-700">
-                    🖼️ Adicionar imagem de fundo aleatória
-                  </span>
-                </label>
-              </div>
-
-              {/* Buscar imagem */}
-              {useUnsplashBg && (
-                <div className="space-y-2">
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-                    <p className="text-sm text-green-800">
-                      ✨ Clique no botão abaixo para adicionar uma imagem de fundo aleatória ao seu banner!
-                    </p>
+          {/* Estilos */}
+          <div className="space-y-2">
+            <label className="block text-sm font-bold text-gray-700">Opções de estilo</label>
+            <div className="grid grid-cols-2 gap-2">
+              {styles.map((styleOption) => (
+                <button
+                  key={styleOption.id}
+                  onClick={() => setBannerStyle(styleOption.id)}
+                  className={`p-3 rounded-lg border-2 transition-all text-left ${
+                    bannerStyle === styleOption.id
+                      ? 'bg-purple-100 border-purple-500'
+                      : 'bg-white border-gray-300 hover:border-purple-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl">{styleOption.emoji}</span>
+                    <span className="font-semibold text-sm">{styleOption.name}</span>
                   </div>
-                  <button
-                    onClick={searchUnsplash}
-                    disabled={isSearching}
-                    className="w-full px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-bold disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    <Search size={16} />
-                    {isSearching ? 'Carregando...' : 'Carregar Imagem de Fundo'}
-                  </button>
-                  {unsplashImageUrl && (
-                    <div className="text-center">
-                      <p className="text-xs text-green-600 font-semibold">✓ Imagem carregada! Clique em "Gerar Banner" para criar.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Botão Gerar */}
-              <button
-                onClick={generateBanner}
-                disabled={isGenerating || !bannerTitle.trim()}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-bold disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <Wand2 size={20} />
-                {isGenerating ? 'Gerando...' : 'Gerar Banner Grátis'}
-              </button>
+                  <p className="text-xs text-gray-600">{styleOption.desc}</p>
+                </button>
+              ))}
             </div>
-          )}
+          </div>
+
+          {/* Botão Gerar */}
+          <button
+            onClick={generateBanner}
+            disabled={isGenerating || !bannerTitle.trim()}
+            className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all font-bold disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            <Wand2 size={20} />
+            {isGenerating ? 'Gerando...' : 'Gerar'}
+          </button>
 
           {/* Canvas oculto para geração */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />

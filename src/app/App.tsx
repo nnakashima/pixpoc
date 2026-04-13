@@ -1,1006 +1,729 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Balloon } from './components/Balloon';
-import { SettingsPanel } from './components/SettingsPanel';
 import { SplashScreen } from './components/SplashScreen';
-import { Banner } from './components/Banner';
 import { BannerConfigModal } from './components/BannerConfigModal';
-import { AlertTriangle } from 'lucide-react';
-import { X, CheckCircle, Trash2, User, HelpCircle } from 'lucide-react';
-import { ImageIcon } from 'lucide-react';
-// Use banner from public folder for production
-const bannerImage = '/banner-pixpoc.png';
-const faviconImage = '/favicon.svg';
-import {
-  trackBalloonPop,
-  trackRaffleCreated,
-  trackBannerView,
-  trackBannerConfigAccess,
-  trackPasswordAttempt,
-  trackHelpAccess,
-  trackSoundToggle,
-  trackColorModeToggle,
-} from './utils/analytics';
+import { AlertTriangle, HelpCircle, Dice5, Plus, Trash2, Upload } from 'lucide-react';
 
-const BALLOON_COLORS = [
-  '#FF6B6B', // Red
-  '#4ECDC4', // Teal
-  '#45B7D1', // Blue
-  '#FFA07A', // Orange
-  '#98D8C8', // Mint
-  '#F7DC6F', // Yellow
-  '#BB8FCE', // Purple
-  '#85C1E2', // Sky Blue
-  '#F8B500', // Gold
-  '#FF69B4', // Pink
-];
+const BALLOON_COLORS = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8', '#F7DC6F'];
+const MESSAGES = {
+  'pt-BR': {
+    bannerDefault: 'BOA SORTE !',
+    tabConfig: 'config',
+    tabWinner: 'ganhador',
+    wizardTitle: 'Configuração rápida',
+    wizardCount: 'Quantos balões terá o sorteio?',
+    wizardItems: 'Quais os textos (valores R$, itens ou nomes)? Separe por linha.',
+    wizardSkip: 'Pular',
+    wizardApply: 'Aplicar e continuar',
+    prizesTitle: 'Prêmios (item, descrição, qtd, imagem)',
+    add: 'Adicionar',
+    singleColor: 'Cor única dos balões',
+    sound: 'Som',
+    dark: 'Dark mode',
+    language: 'Idioma',
+    winnerTitle: 'Dados do Ganhador',
+    name: 'Nome',
+    prize: 'Prêmio',
+    contact: 'Celular / Email',
+    pix: 'Chave Pix',
+    timestamp: 'Timestamp',
+    ip: 'IP',
+    audit: 'Auditoria',
+    balloonsCount: '# balões',
+    poppedCount: 'Estourados',
+    saveReport: 'Salvar relatório (.txt)',
+    clear: 'Limpar',
+    statsRemaining: 'Restantes',
+    statsPopped: 'Estourados',
+    addImage: 'Upload',
+    remove: 'Remover',
+    sortAgain: 'Sortear novamente',
+    headerHelp: 'Ajuda',
+  },
+  'en-US': {
+    bannerDefault: 'GOOD LUCK!',
+    tabConfig: 'settings',
+    tabWinner: 'winner',
+    wizardTitle: 'Quick setup',
+    wizardCount: 'How many balloons?',
+    wizardItems: 'Prize texts (one per line)',
+    wizardSkip: 'Skip',
+    wizardApply: 'Apply and continue',
+    prizesTitle: 'Prizes (item, description, qty, image)',
+    add: 'Add',
+    singleColor: 'Single balloon color',
+    sound: 'Sound',
+    dark: 'Dark mode',
+    language: 'Language',
+    winnerTitle: 'Winner data',
+    name: 'Name',
+    prize: 'Prize',
+    contact: 'Phone / Email',
+    pix: 'Pix key',
+    timestamp: 'Timestamp',
+    ip: 'IP',
+    audit: 'Audit',
+    balloonsCount: '# balloons',
+    poppedCount: 'Popped',
+    saveReport: 'Save report (.txt)',
+    clear: 'Clear',
+    statsRemaining: 'Remaining',
+    statsPopped: 'Popped',
+    addImage: 'Upload',
+    remove: 'Remove',
+    sortAgain: 'Shuffle again',
+    headerHelp: 'Help',
+  },
+} as const;
 
-// Embaralha array usando Web Crypto API com Fisher-Yates
-function secureArrayShuffle<T>(array: T[]): T[] {
-  const shuffled = [...array];
-  
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    // Rejection sampling para evitar viés
-    const maxValue = Math.pow(2, 32);
-    const range = i + 1;
-    let randomIndex: number;
-    
-    do {
-      const randomValues = new Uint32Array(1);
-      crypto.getRandomValues(randomValues);
-      randomIndex = randomValues[0];
-    } while (randomIndex >= maxValue - (maxValue % range));
-    
-    randomIndex = randomIndex % range;
-    [shuffled[i], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[i]];
+const DEFAULT_BANNER_TEXT = MESSAGES['pt-BR'].bannerDefault;
+const diceAnimCss = `
+@keyframes rollDice {
+  0% { transform: rotate(0deg); }
+  25% { transform: rotate(90deg); }
+  50% { transform: rotate(180deg); }
+  75% { transform: rotate(270deg); }
+  100% { transform: rotate(360deg); }
+}
+`;
+
+type PrizeItem = {
+  id: number;
+  description: string;
+  qty: number;
+  image?: string;
+};
+
+function createModernBanner(text: string, subtitle = ''): string {
+  if (typeof document === 'undefined') return '';
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 200;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return '';
+
+  const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+  gradient.addColorStop(0, '#667eea');
+  gradient.addColorStop(1, '#764ba2');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 52px "Segoe UI", sans-serif';
+  ctx.fillText(text, canvas.width / 2, subtitle ? canvas.height / 2 - 12 : canvas.height / 2);
+  if (subtitle) {
+    ctx.font = 'normal 26px "Segoe UI", sans-serif';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 32);
   }
-  
-  return shuffled;
+  return canvas.toDataURL('image/png');
 }
 
-interface BannerConfig {
-  imageUrl: string;
-  isActive: boolean;
-  maxViews: number;
-  currentViews: number;
-  linkUrl: string;
-  altText: string;
+function secureShuffle<T>(arr: T[]) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export default function App() {
-  const [balloonCount, setBalloonCount] = useState(12);
+  const [activeTab, setActiveTab] = useState<'config' | 'winner' | null>(null);
+  const [popped, setPopped] = useState<Record<number, { label: string; imageUrl?: string } | undefined>>({});
+  const [prizes, setPrizes] = useState<PrizeItem[]>([
+    { id: 1, description: 'R$ 10', qty: 1 },
+    { id: 2, description: 'R$ 20', qty: 1 },
+    { id: 3, description: 'R$ 50', qty: 1 },
+    { id: 4, description: 'R$ 100', qty: 1 },
+    { id: 5, description: 'Brinde Coca-Cola', qty: 2 },
+    { id: 6, description: 'Brinde Subway', qty: 2 },
+    { id: 7, description: 'Camisa Proselling', qty: 1 },
+  ]);
+  const [sound, setSound] = useState(true);
   const [singleColor, setSingleColor] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-  const [currentSingleColor, setCurrentSingleColor] = useState(BALLOON_COLORS[0]);
-  
-  // Banner Configuration State
-  const [bannerConfig, setBannerConfig] = useState<BannerConfig>(() => {
-    const saved = localStorage.getItem('pixpoc_banner_config');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Garantir que imageUrl seja atualizado para o novo banner
-        return {
-          ...parsed,
-          imageUrl: bannerImage, // Sempre usar o novo banner
-          isActive: parsed.isActive !== undefined ? parsed.isActive : true
-        };
-      } catch (e) {
-        console.error('Erro ao ler banner config do localStorage:', e);
-      }
-    }
-    return {
-      imageUrl: bannerImage,
-      isActive: true,
-      maxViews: 0, // 0 = ilimitado
-      currentViews: 0,
-      linkUrl: '',
-      altText: 'Banner PixPoc - Estourando a Boca do Balão'
-    };
-  });
-  const [showBannerConfig, setShowBannerConfig] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [passwordInput, setPasswordInput] = useState('');
-  const [passwordError, setPasswordError] = useState(false);
-  
-  // Prêmios personalizáveis - valores monetários por padrão
-  const [prizeSelections, setPrizeSelections] = useState<{ [key: string]: number }>({
-    'R$ 0,00': 1, 'R$ 0,05': 1, 'R$ 0,10': 1, 'R$ 0,25': 1, 'R$ 0,50': 1, 
-    'R$ 1,00': 1, 'R$ 2,00': 1, 'R$ 5,00': 1, 'R$ 10,00': 1, 'R$ 20,00': 1, 
-    'R$ 50,00': 1, 'R$ 100,00': 1, 'R$ 200,00': 0
-  });
-  const [poppedBalloons, setPoppedBalloons] = useState<{ [key: number]: string }>({});
-  const [balloons, setBalloons] = useState<Array<{ id: number; color: string }>>([]);
-  const [balloonCurrencyMap, setBalloonCurrencyMap] = useState<{ [key: number]: string }>({});
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateSelections, setDuplicateSelections] = useState<string[]>([]);
-  const [pendingBalloonCount, setPendingBalloonCount] = useState<number | null>(null);
-  const [currentDateTime, setCurrentDateTime] = useState(new Date());
-  const [ipAddress, setIpAddress] = useState<string>('Carregando...');
-  const [showWinnerModal, setShowWinnerModal] = useState(false);
-  const [winnerInfo, setWinnerInfo] = useState({
-    name: '',
-    reference: '',
-    pixKey: ''
-  });
-  const [showSettingsMobile, setShowSettingsMobile] = useState(false);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  const [isShuffling, setIsShuffling] = useState(false);
-  const [shuffleProgress, setShuffleProgress] = useState(0);
-  const [shufflingColors, setShufflingColors] = useState<string[]>([]);
-  const [highlightedBalloons, setHighlightedBalloons] = useState<number | null>(null);
+  const [language, setLanguage] = useState('pt-BR');
+  const [bg, setBg] = useState<'gradient' | 'dark'>('dark');
+  const [winner, setWinner] = useState({ name: '', prize: '', contact: '', pix: '' });
+  const [bannerConfig, setBannerConfig] = useState({ imageUrl: '', altText: DEFAULT_BANNER_TEXT });
+  const [showBannerModal, setShowBannerModal] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const [selectedPrizeIds, setSelectedPrizeIds] = useState<Set<number>>(new Set());
+  const [isRolling, setIsRolling] = useState(false);
+  const [rollTick, setRollTick] = useState(0);
+  const [singleColorIndex, setSingleColorIndex] = useState(0);
+  const [showWizard, setShowWizard] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    return localStorage.getItem('pixpoc_wizard_done') !== 'true';
+  });
+  const [wizardItems, setWizardItems] = useState('R$ 0,00\nR$ 5,00\nR$ 10,00');
 
-  // Update date/time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentDateTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const wizardItemsArray = useMemo(
+    () => wizardItems.split(/\r?\n/).map((t) => t.trim()).filter(Boolean),
+    [wizardItems]
+  );
 
-  // Track viewport size
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+  const expandedPrizes = useMemo(() => {
+    const list: { label: string; imageUrl?: string }[] = [];
+    prizes.forEach((p) => {
+      const times = Math.max(0, Math.min(99, p.qty || 0));
+      for (let i = 0; i < times; i++) {
+        list.push({ label: p.description || `Item ${p.id}`, imageUrl: p.image });
+      }
+    });
+    return list;
+  }, [prizes]);
 
-  // Fetch IP address
-  useEffect(() => {
-    fetch('https://api.ipify.org?format=json')
-      .then(response => response.json())
-      .then(data => setIpAddress(data.ip))
-      .catch(() => setIpAddress('Indisponível'));
-  }, []);
+  // Embaralha a lista de prêmios a cada nova rodada ou alteração
+  const shuffledPrizes = useMemo(() => secureShuffle(expandedPrizes), [expandedPrizes, shuffleSeed]);
 
-  // Update favicon
-  useEffect(() => {
-    const favicon = document.getElementById('favicon') as HTMLLinkElement;
-    if (favicon) {
-      favicon.href = faviconImage;
-    }
-  }, []);
+  const balloonCount = expandedPrizes.length;
 
-  // Initialize balloons on mount
-  useEffect(() => {
-    const initialBalloons = Array.from({ length: balloonCount }, (_, i) => ({
-      id: i + 1,
-      color: singleColor ? BALLOON_COLORS[0] : BALLOON_COLORS[i % BALLOON_COLORS.length],
-    }));
-    setBalloons(initialBalloons);
-  }, []);
-
-  useEffect(() => {
-    resetBalloons();
-  }, [balloonCount, singleColor, prizeSelections]);
-
-  const resetBalloons = () => {
-    let shuffledColors: string[];
-    
+  const balloons = useMemo(() => {
+    let colors: string[];
     if (singleColor) {
-      // Escolher uma cor aleatória diferente da atual
-      const availableColors = BALLOON_COLORS.filter(color => color !== currentSingleColor);
-      const randomValues = new Uint32Array(1);
-      crypto.getRandomValues(randomValues);
-      const randomIndex = randomValues[0] % availableColors.length;
-      const newColor = availableColors[randomIndex];
-      setCurrentSingleColor(newColor);
-      shuffledColors = Array.from({ length: balloonCount }, () => newColor);
+      // Se estiver rolando, cicla rapidamente pela paleta para dar efeito
+      if (isRolling) {
+        colors = Array.from({ length: Math.max(balloonCount, 1) }, (_, i) =>
+          BALLOON_COLORS[(i + rollTick) % BALLOON_COLORS.length]
+        );
+      } else {
+        colors = Array(balloonCount).fill(BALLOON_COLORS[singleColorIndex % BALLOON_COLORS.length]);
+      }
     } else {
-      // Embaralhar as cores dos balões para criar efeito de "reembaralhamento"
-      shuffledColors = secureArrayShuffle(
-        Array.from({ length: balloonCount }, (_, i) => BALLOON_COLORS[i % BALLOON_COLORS.length])
+      colors = secureShuffle(
+        Array.from({ length: Math.max(balloonCount, 1) }, (_, i) => BALLOON_COLORS[i % BALLOON_COLORS.length])
       );
+      if (isRolling) colors = secureShuffle(colors);
     }
-    
-    const newBalloons = Array.from({ length: balloonCount }, (_, i) => ({
-      id: i + 1,
-      color: shuffledColors[i],
-    }));
-    setBalloons(newBalloons);
-    setPoppedBalloons({});
-    
-    // Criar mapeamento fixo 1:1 entre balões e valores
-    // Só cria o mapeamento se as quantidades forem iguais
-    const totalSelectedValues = Object.values(prizeSelections).reduce((acc, count) => acc + count, 0);
-    if (balloonCount === totalSelectedValues) {
-      const shuffledCurrencies: string[] = [];
-      Object.keys(prizeSelections).forEach(key => {
-        for (let i = 0; i < prizeSelections[key]; i++) {
-          shuffledCurrencies.push(key);
-        }
-      });
-      const shuffled = secureArrayShuffle(shuffledCurrencies);
-      const newMap: { [key: number]: string } = {};
-      
-      for (let i = 0; i < balloonCount; i++) {
-        newMap[i + 1] = shuffled[i];
-      }
-      
-      setBalloonCurrencyMap(newMap);
-    } else {
-      setBalloonCurrencyMap({});
+    return Array.from({ length: balloonCount || 0 }, (_, i) => ({ id: i + 1, color: colors[i] }));
+  }, [balloonCount, singleColor, isRolling, rollTick]);
+
+  useEffect(() => {
+    setPopped({});
+    setSelectedPrizeIds(new Set());
+    setWinner((prev) => ({ ...prev, prize: '' }));
+    // novo seed força reordenação dos prêmios revelados
+    setShuffleSeed((s) => s + 1);
+  }, [balloonCount, prizes]);
+
+  // Animação visual e reembaralhamento durante o clique do dado
+  useEffect(() => {
+    if (!isRolling) return;
+    const interval = setInterval(() => setRollTick((t) => t + 1), 140);
+    const timeout = setTimeout(() => {
+      setIsRolling(false);
+      setRollTick(0);
+      setShuffleSeed((s) => s + 1);
+    }, 1200);
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [isRolling]);
+
+  // Injeta a animação do dado no documento (apenas uma vez)
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const styleId = 'pixpoc-dice-anim';
+    if (document.getElementById(styleId)) return;
+    const style = document.createElement('style');
+    style.id = styleId;
+    style.innerHTML = diceAnimCss;
+    document.head.appendChild(style);
+  }, []);
+
+  // Gera um banner padrão estilizado caso não exista imagem definida
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (bannerConfig.imageUrl) return;
+    const dataUrl = createModernBanner(bannerConfig.altText || DEFAULT_BANNER_TEXT);
+    if (dataUrl) {
+      setBannerConfig((prev) => ({ ...prev, imageUrl: dataUrl }));
+    }
+  }, [bannerConfig.imageUrl, bannerConfig.altText]);
+
+  const t = (key: keyof typeof MESSAGES['pt-BR']) => MESSAGES[language === 'en-US' ? 'en-US' : 'pt-BR'][key];
+
+  const applyWizard = () => {
+    if (wizardItemsArray.length > 0) {
+      const mapped: PrizeItem[] = wizardItemsArray.map((desc, idx) => ({ id: idx + 1, description: desc, qty: 1 }));
+      setPrizes(mapped);
+    }
+    setShowWizard(false);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pixpoc_wizard_done', 'true');
     }
   };
 
-  const handlePopBalloon = (number: number) => {
-    // Verificar se o jogo está válido (mesma quantidade de balões e valores)
-    if (balloonCount !== Object.keys(prizeSelections).reduce((acc, key) => acc + prizeSelections[key], 0)) {
-      return; // Não faz nada se as quantidades não forem iguais
-    }
-
-    // Revelar o valor pré-atribuído a este balão
-    const currency = balloonCurrencyMap[number];
-    if (currency) {
-      setPoppedBalloons(prev => {
-        const newPopped = {
-          ...prev,
-          [number]: currency,
-        };
-        trackBalloonPop(number, currency, Object.keys(newPopped).length);
-        return newPopped;
-      });
-    }
+  const handlePop = (id: number) => {
+    if (id in popped) return;
+    const prize = shuffledPrizes.length ? shuffledPrizes[(Object.keys(popped).length) % shuffledPrizes.length] : undefined;
+    setPopped((p) => ({ ...p, [id]: prize }));
   };
 
-  const handleReset = () => {
-    if (isShuffling) return; // Evita múltiplos cliques
-    
-    // IMEDIATAMENTE resetar os balões e limpar destaques
-    setPoppedBalloons({});
-    setHighlightedBalloons(null);
-    
-    // Track raffle creation
-    const totalPrizes = Object.values(prizeSelections).reduce((acc, count) => acc + count, 0);
-    trackRaffleCreated(balloonCount, singleColor, totalPrizes);
-    
-    setIsShuffling(true);
-    setShuffleProgress(0);
-    
-    // Tocar som de processamento eletrônico
-    if (soundEnabled) {
-      playProcessingSound();
-    }
-    
-    // Animar o progresso de 0 a 100 em 1.5 segundos
-    const duration = 1500; // 1.5 segundos
-    const steps = 60; // 60 frames
-    const increment = 100 / steps;
-    const stepDuration = duration / steps;
-    
-    // Iniciar animação rápida de mudança de cores
-    const colorChangeInterval = setInterval(() => {
-      if (singleColor) {
-        // Todos os balões mudam para a mesma cor aleatória
-        const randomColorIndex = Math.floor(Math.random() * BALLOON_COLORS.length);
-        const randomColor = BALLOON_COLORS[randomColorIndex];
-        setShufflingColors(Array(balloonCount).fill(randomColor));
+  const handleToggleHighlight = (id: number) => {
+    if (!(id in popped)) return;
+    setSelectedPrizeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
       } else {
-        // Cada balão muda para uma cor aleatória independente
-        const randomColors = Array.from({ length: balloonCount }, () => {
-          const randomIndex = Math.floor(Math.random() * BALLOON_COLORS.length);
-          return BALLOON_COLORS[randomIndex];
-        });
-        setShufflingColors(randomColors);
+        next.add(id);
       }
-    }, 50); // Muda as cores a cada 50ms (super rápido!)
-    
-    let currentStep = 0;
-    const interval = setInterval(() => {
-      currentStep++;
-      setShuffleProgress(Math.min(currentStep * increment, 100));
-      
-      if (currentStep >= steps) {
-        clearInterval(interval);
-        clearInterval(colorChangeInterval);
-        // Após completar a animação, finalizar o shuffle com cores definitivas
-        setTimeout(() => {
-          setShufflingColors([]);
-          resetBalloons();
-          setIsShuffling(false);
-          setShuffleProgress(0);
-        }, 100);
+      // Atualiza campo "Prêmio" do ganhador
+      const orderedLabels = Array.from(next).map((pid) => popped[pid]?.label).filter(Boolean) as string[];
+      setWinner((w) => ({ ...w, prize: orderedLabels.join(', ') }));
+      return next;
+    });
+  };
+
+  const playRollSound = () => {
+    if (!sound) return;
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      const playHit = (time: number) => {
+        // low tom body
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(180, time);
+        osc.frequency.exponentialRampToValueAtTime(90, time + 0.12);
+        gain.gain.setValueAtTime(0.18, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(time);
+        osc.stop(time + 0.25);
+
+        // noise for snare-like rustle
+        const bufferSize = ctx.sampleRate * 0.15;
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * 0.35;
+        const noise = ctx.createBufferSource();
+        noise.buffer = buffer;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass';
+        bp.frequency.value = 2000;
+        const ngain = ctx.createGain();
+        ngain.gain.setValueAtTime(0.12, time);
+        ngain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+        noise.connect(bp);
+        bp.connect(ngain);
+        ngain.connect(ctx.destination);
+        noise.start(time);
+        noise.stop(time + 0.2);
+      };
+
+      const now = ctx.currentTime;
+      const hits = 10;
+      const spacing = 0.08; // seconds
+      for (let i = 0; i < hits; i++) {
+        playHit(now + i * spacing);
       }
-    }, stepDuration);
-  };
-
-  // Função para criar som eletrônico de processamento
-  const playProcessingSound = () => {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const duration = 1.5; // 1.5 segundos
-    
-    // Tic-tac de relógio mecânico (alternando entre duas frequências)
-    const tickTocks = [
-      { freq: 800, time: 0.0, duration: 0.05, volume: 0.3 },    // Tic
-      { freq: 600, time: 0.15, duration: 0.05, volume: 0.25 },  // Tac
-      { freq: 800, time: 0.30, duration: 0.05, volume: 0.3 },   // Tic
-      { freq: 600, time: 0.45, duration: 0.05, volume: 0.25 },  // Tac
-      { freq: 800, time: 0.60, duration: 0.05, volume: 0.3 },   // Tic
-      { freq: 600, time: 0.75, duration: 0.05, volume: 0.25 },  // Tac
-      { freq: 800, time: 0.90, duration: 0.05, volume: 0.3 },   // Tic
-      { freq: 600, time: 1.05, duration: 0.05, volume: 0.25 },  // Tac
-      { freq: 800, time: 0.120, duration: 0.05, volume: 0.3 },   // Tic
-      { freq: 600, time: 0.135, duration: 0.05, volume: 0.25 },  // Tac final
-    ];
-    
-    // Criar tic-tac mecânico
-    tickTocks.forEach(tick => {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      
-      // Som percussivo tipo clique de relógio
-      oscillator.type = 'sine';
-      oscillator.frequency.value = tick.freq;
-      
-      const startTime = audioContext.currentTime + tick.time;
-      const endTime = startTime + tick.duration;
-      
-      // Envelope muito curto para som de "clique"
-      gainNode.gain.setValueAtTime(0, startTime);
-      gainNode.gain.linearRampToValueAtTime(tick.volume, startTime + 0.001);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, endTime);
-      
-      oscillator.start(startTime);
-      oscillator.stop(endTime);
-    });
-    
-    // Adicionar componente de "madeira/mecânico" (ruído branco filtrado)
-    tickTocks.forEach(tick => {
-      // Criar buffer de ruído branco
-      const bufferSize = audioContext.sampleRate * tick.duration;
-      const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
-      const data = buffer.getChannelData(0);
-      
-      // Preencher com ruído branco
-      for (let i = 0; i < bufferSize; i++) {
-        data[i] = Math.random() * 2 - 1;
-      }
-      
-      const noise = audioContext.createBufferSource();
-      noise.buffer = buffer;
-      
-      const noiseFilter = audioContext.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.value = tick.freq;
-      noiseFilter.Q.value = 10;
-      
-      const noiseGain = audioContext.createGain();
-      
-      noise.connect(noiseFilter);
-      noiseFilter.connect(noiseGain);
-      noiseGain.connect(audioContext.destination);
-      
-      const startTime = audioContext.currentTime + tick.time;
-      
-      noiseGain.gain.setValueAtTime(0, startTime);
-      noiseGain.gain.linearRampToValueAtTime(0.08, startTime + 0.001);
-      noiseGain.gain.exponentialRampToValueAtTime(0.01, startTime + tick.duration);
-      
-      noise.start(startTime);
-      noise.stop(startTime + tick.duration);
-    });
-    
-    // Tom grave de tensão crescente (opcional - pode comentar se preferir apenas tic-tac)
-    const tension = audioContext.createOscillator();
-    const tensionGain = audioContext.createGain();
-    
-    tension.connect(tensionGain);
-    tensionGain.connect(audioContext.destination);
-    
-    tension.type = 'triangle';
-    tension.frequency.value = 55; // A1 (grave profundo)
-    
-    const tensionStart = audioContext.currentTime;
-    tensionGain.gain.setValueAtTime(0, tensionStart);
-    tensionGain.gain.linearRampToValueAtTime(0.05, tensionStart + 0.3);
-    tensionGain.gain.setValueAtTime(0.05, tensionStart + 1.2);
-    tensionGain.gain.linearRampToValueAtTime(0, tensionStart + 1.5);
-    
-    tension.start(tensionStart);
-    tension.stop(tensionStart + 1.5);
-  };
-
-  const handleDuplicateModalClose = () => {
-    setShowDuplicateModal(false);
-    setDuplicateSelections([]);
-    setPendingBalloonCount(null);
-  };
-
-  const handleDuplicateModalConfirm = () => {
-    if (pendingBalloonCount !== null && duplicateSelections.length === pendingBalloonCount - Object.keys(prizeSelections).length) {
-      // Criar nova lista com todos os valores únicos + duplicados
-      const newPrizeSelections: { [key: string]: number } = { ...prizeSelections };
-      duplicateSelections.forEach(value => {
-        if (newPrizeSelections[value]) {
-          newPrizeSelections[value]++;
-        } else {
-          newPrizeSelections[value] = 1;
-        }
-      });
-      setPrizeSelections(newPrizeSelections);
-      setBalloonCount(pendingBalloonCount);
-    }
-    handleDuplicateModalClose();
-  };
-
-  const handleBalloonCountChange = (newCount: number) => {
-    setBalloonCount(newCount);
-  };
-
-  const toggleDuplicateValue = (value: string) => {
-    if (duplicateSelections.includes(value)) {
-      setDuplicateSelections(duplicateSelections.filter(v => v !== value));
-    } else {
-      setDuplicateSelections([...duplicateSelections, value]);
+    } catch (e) {
+      /* ignore */
     }
   };
 
-  const handleOpenWinnerModal = () => {
-    setShowWinnerModal(true);
+  const saveReport = () => {
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}-${pad(now.getMinutes())}-${pad(now.getSeconds())}`;
+    const lines = [
+      'PixPoc - Relatório de Ganhador',
+      `Data/Hora: ${now.toLocaleString(language)}`,
+      `Nome: ${winner.name || '-'}`,
+      `Prêmio: ${winner.prize || '-'}`,
+      `Contato: ${winner.contact || '-'}`,
+      `Chave Pix: ${winner.pix || '-'}`,
+      `Balões estourados: ${Object.keys(popped).length}/${balloonCount}`,
+    ].join('\n');
+    const blob = new Blob([lines], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PixPoc-${winner.name || 'ganhador'}-${stamp}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
-  const handleCloseWinnerModal = () => {
-    setShowWinnerModal(false);
-  };
-
-  const handleClearWinnerInfo = () => {
-    setWinnerInfo({
-      name: '',
-      reference: '',
-      pixKey: ''
-    });
-  };
-
-  const handleSaveWinnerInfo = () => {
-    setShowWinnerModal(false);
-    trackWinnerInfoSaved(
-      !!winnerInfo.name,
-      !!winnerInfo.reference,
-      !!winnerInfo.pixKey
-    );
-  };
-
-  const handleToggleBalloonHighlight = (number: number) => {
-    // Só alterna o destaque se o balão já foi estourado
-    if (number in poppedBalloons) {
-      const newHighlightedBalloon = highlightedBalloons === number ? null : number;
-      setHighlightedBalloons(newHighlightedBalloon);
-      
-      // Se destacou um balão, copiar o valor para o campo "Referência do Prêmio"
-      if (newHighlightedBalloon !== null) {
-        const prize = poppedBalloons[number];
-        setWinnerInfo(prev => ({
-          ...prev,
-          reference: prize
-        }));
-        trackBalloonHighlight(number, prize, true);
-      } else {
-        // Se desmarcou todos os balões, limpar o campo "Referência do Prêmio"
-        setWinnerInfo(prev => ({
-          ...prev,
-          reference: ''
-        }));
-      }
-    }
-  };
-
-  // Banner functions
-  const handleBannerView = () => {
-    setBannerConfig(prev => {
-      const updated = { ...prev, currentViews: prev.currentViews + 1 };
-      localStorage.setItem('pixpoc_banner_config', JSON.stringify(updated));
-      trackBannerView(updated.imageUrl, updated.currentViews);
-      return updated;
-    });
-  };
-
-  const handleSaveBannerConfig = (config: BannerConfig) => {
-    setBannerConfig(config);
-    localStorage.setItem('pixpoc_banner_config', JSON.stringify(config));
-    trackBannerConfigAccess(true);
-  };
-
-  const shouldShowBanner = () => {
-    console.log('Banner check:', {
-      isActive: bannerConfig.isActive,
-      hasWinnerInfo: !!(winnerInfo.name || winnerInfo.reference || winnerInfo.pixKey),
-      maxViews: bannerConfig.maxViews,
-      currentViews: bannerConfig.currentViews,
-      imageUrl: bannerConfig.imageUrl
-    });
-    
-    if (!bannerConfig.isActive) return false;
-    if (!(winnerInfo.name || winnerInfo.reference || winnerInfo.pixKey)) {
-      // Banner só aparece se não houver dados do ganhador
-      if (bannerConfig.maxViews === 0) return true; // Ilimitado
-      return bannerConfig.currentViews < bannerConfig.maxViews;
-    }
-    return false;
-  };
-
-  const handleOpenBannerConfig = () => {
-    setShowPasswordModal(true);
-    setPasswordInput('');
-    setPasswordError(false);
-  };
-
-  const handlePasswordSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === '5Eyl@eU!') {
-      setShowPasswordModal(false);
-      setShowBannerConfig(true);
-      setPasswordInput('');
-      setPasswordError(false);
-      trackPasswordAttempt(true);
-    } else {
-      setPasswordError(true);
-      trackPasswordAttempt(false);
-    }
-  };
-
-  // Mobile-first helpers
-  const isCompactMobileLayout = balloonCount <= 12;
-  const gridColumnsClass = isCompactMobileLayout
-    ? 'grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6'
-    : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6';
+  const isDark = bg === 'dark';
+  const bgStyle = isDark
+    ? 'bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800'
+    : 'bg-white';
+  const textClass = isDark ? 'text-slate-100' : 'text-slate-900';
+  const panelClass = isDark
+    ? 'bg-slate-800/90 border-slate-700 text-slate-100 shadow-xl'
+    : 'bg-white border-slate-200 text-slate-700 shadow-lg';
+  const cardSoftBg = isDark ? 'bg-slate-900/70 border-slate-700' : 'bg-white/85 border-slate-200';
+  const badgeClass = isDark ? 'bg-slate-800 border-slate-700 text-slate-100' : 'bg-slate-100 border-slate-200 text-slate-700';
+  const inputClass = (extra = '') =>
+    `${isDark ? 'bg-slate-900 border-slate-700 text-white placeholder-slate-400' : 'bg-white border-slate-200 text-slate-800'} ${extra}`;
+  const headerClass = isDark ? 'backdrop-blur bg-slate-900/85 border-b border-slate-800 shadow-lg' : 'backdrop-blur bg-white/90 border-b border-slate-200 shadow-sm';
+  const navActive = isDark ? 'bg-slate-800 text-white border-slate-600 shadow' : 'bg-white text-slate-900 border-slate-300 shadow';
+  const navInactive = isDark ? 'bg-slate-800/50 text-slate-200 border-transparent hover:border-slate-600' : 'bg-white/70 text-slate-700 border-transparent hover:border-slate-200';
 
   return (
     <>
-      {/* Splash Screen */}
       {showSplash && <SplashScreen onStart={() => setShowSplash(false)} />}
 
-      {/* Main App */}
-      <div className="min-h-screen flex flex-col lg:flex-row bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
-        {/* Timestamp and IP info - top left */}
-        <div className="hidden lg:block fixed top-4 left-4 z-40 bg-white/10 backdrop-blur-lg px-4 py-2 rounded-lg border border-white/20 text-white text-xs shadow-xl">
-          <div className="font-semibold mb-1">📅 {currentDateTime.toLocaleDateString('pt-BR', { 
-            day: '2-digit', 
-            month: '2-digit', 
-            year: 'numeric' 
-          })} - {currentDateTime.toLocaleTimeString('pt-BR')}</div>
-          <div className="text-white/80">🌐 IP: {ipAddress}</div>
-        </div>
-
-        {/* Help button - top right (desktop only) */}
-        {!isMobile && (
-          <button
-            onClick={() => setShowSplash(true)}
-            className="fixed top-4 right-4 z-40 bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
-            title="Como Usar"
-          >
-            <HelpCircle size={20} />
-          </button>
-        )}
-
-        {/* Banner Config button - top right, next to Help */}
-        <button
-          onClick={handleOpenBannerConfig}
-          className="hidden lg:flex fixed top-4 right-16 z-40 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-xl transition-all hover:scale-110"
-          title="Configurar Banner"
-        >
-          <ImageIcon size={20} />
-        </button>
-
-        {/* Main content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="p-6 border-b border-white/10">
-            <div className="max-w-7xl mx-auto text-center">
-              {/* Banner para monetização - só aparece se NÃO houver dados do ganhador */}
-              {shouldShowBanner() && (
-                <div className="mx-auto max-w-4xl">
-                  <Banner
-                    imageUrl={bannerConfig.imageUrl}
-                    linkUrl={bannerConfig.linkUrl}
-                    altText={bannerConfig.altText}
-                    onView={handleBannerView}
-                  />
-                </div>
-              )}
-              
-              {/* Winner info - below title, centered */}
-              {(winnerInfo.name || winnerInfo.reference || winnerInfo.pixKey) && (
-                <div className={`${shouldShowBanner() ? 'mt-4' : ''} mx-auto bg-yellow-400/95 backdrop-blur-lg px-4 py-3 rounded-lg border-2 border-yellow-500 shadow-xl text-gray-900 w-fit max-w-md`}>
-                  <div className="font-bold text-sm text-center border-b-2 border-gray-900/30 pb-1 mb-2">
-                    🏆 Ganhador
-                  </div>
-                  {winnerInfo.name && (
-                    <div className="text-xs mb-1">
-                      <span className="font-semibold">Nome:</span> {winnerInfo.name}
-                    </div>
-                  )}
-                  {winnerInfo.reference && (
-                    <div className="text-xs mb-1">
-                      <span className="font-semibold">Ref:</span> {winnerInfo.reference}
-                    </div>
-                  )}
-                  {winnerInfo.pixKey && (
-                    <div className="text-xs">
-                      <span className="font-semibold">PIX:</span> {winnerInfo.pixKey}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </header>
-
-          {/* Balloon canvas */}
-          <main
-            className={`flex-1 p-4 md:p-12 ${isCompactMobileLayout ? 'overflow-hidden' : 'overflow-auto'}`}
-            style={isMobile ? undefined : (isCompactMobileLayout ? { maxHeight: 'calc(100vh - 140px)' } : undefined)}
-          >
-            <div className="max-w-7xl mx-auto">
-              {/* Warning if counts don't match */}
-              {balloonCount !== Object.keys(prizeSelections).reduce((acc, key) => acc + prizeSelections[key], 0) && (
-                <div className="mb-6 mx-auto max-w-2xl bg-yellow-500/20 border-2 border-yellow-500 rounded-lg p-4 flex items-start gap-3">
-                  <AlertTriangle className="text-yellow-500 flex-shrink-0 mt-0.5" size={24} />
-                  <div className="text-white">
-                    <div className="font-bold mb-1">Atenção: Sorteio Bloqueado!</div>
-                    <p className="text-sm text-white/90">
-                      Para garantir a lisura do sorteio, o número de balões ({balloonCount}) deve ser igual ao número de valores de moeda selecionados ({Object.keys(prizeSelections).reduce((acc, key) => acc + prizeSelections[key], 0)}).
-                    </p>
-                    <p className="text-sm text-white/90 mt-2">
-                      Por favor, ajuste as configurações no painel lateral.
-                    </p>
-                  </div>
-                </div>
-              )}
-
+      <div className={`min-h-screen ${bgStyle} ${textClass}`}>
+        {/* Header */}
+        <header className={`sticky top-0 z-30 ${headerClass}`}>
+          <div className="max-w-6xl mx-auto flex items-center gap-3 px-4 py-3">
+            <img src="/logo-pixpoc.png" alt="PixPoc" className="h-16 w-auto" />
+            <button
+              onClick={() => setShowBannerModal(true)}
+              className="flex-1 h-14 sm:h-16 rounded-xl border border-slate-200 shadow-inner overflow-hidden relative focus:outline-none hover:border-slate-300 transition bg-white"
+            >
               <div
-                className={`grid ${gridColumnsClass} gap-3 sm:gap-4 justify-items-center`}
-                style={
-                  isCompactMobileLayout
-                    ? {
-                        ['--balloon-size' as any]: 'min(24vw, 110px)',
-                        ['--balloon-height' as any]: 'calc(min(24vw, 110px) * 1.35)',
-                      }
-                    : undefined
-                }
+                className="absolute inset-0 flex items-center justify-center text-slate-700 font-semibold px-3 sm:px-4 text-center text-sm sm:text-lg md:text-xl leading-tight truncate"
+                style={bannerConfig.imageUrl ? { backgroundImage: `url(${bannerConfig.imageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                title={!bannerConfig.imageUrl ? (bannerConfig.altText || DEFAULT_BANNER_TEXT) : undefined}
               >
-                {balloons.map((balloon, index) => (
-                  <Balloon
-                    key={balloon.id}
-                    number={balloon.id}
-                    color={shufflingColors.length > 0 ? shufflingColors[index] : balloon.color}
-                    onPop={handlePopBalloon}
-                    isPopped={balloon.id in poppedBalloons}
-                    currency={poppedBalloons[balloon.id] || null}
-                    soundEnabled={soundEnabled}
-                    isHighlighted={highlightedBalloons === balloon.id}
-                    onToggleHighlight={handleToggleBalloonHighlight}
-                    disableFloat={isMobile}
-                  />
-                ))}
+                {!bannerConfig.imageUrl && (bannerConfig.altText || t('bannerDefault'))}
               </div>
-
-              {/* Mobile single-line control ribbon */}
-              {isMobile && (
-                <div className="mt-6 overflow-x-auto whitespace-nowrap flex gap-3 pb-2">
-                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[180px]">
-                    <span className="text-xs opacity-80 font-semibold">Data & IP</span>
-                    <span className="text-sm">{currentDateTime.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })} - {currentDateTime.toLocaleTimeString('pt-BR')}</span>
-                    <span className="text-xs opacity-80">IP: {ipAddress}</span>
-                  </div>
-                  <button
-                    onClick={() => setShowSettingsMobile(true)}
-                    className="inline-flex flex-col justify-center bg-white/15 rounded-2xl px-4 py-3 min-w-[150px] text-left hover:bg-white/25 transition text-white"
-                  >
-                    <span className="font-semibold">Configurações</span>
-                    <span className="text-xs opacity-80">Abrir painel</span>
-                  </button>
-                  <button
-                    onClick={() => setShowSplash(true)}
-                    className="inline-flex flex-col justify-center bg-purple-600/90 rounded-2xl px-4 py-3 min-w-[140px] text-left hover:bg-purple-700 transition text-white"
-                  >
-                    <span className="font-semibold flex items-center gap-1"><HelpCircle size={14}/> Ajuda</span>
-                    <span className="text-xs opacity-80">Como usar</span>
-                  </button>
-                  <button
-                    onClick={handleOpenBannerConfig}
-                    className="inline-flex flex-col justify-center bg-orange-500/90 rounded-2xl px-4 py-3 min-w-[140px] text-left hover:bg-orange-600 transition text-white"
-                  >
-                    <span className="font-semibold flex items-center gap-1"><ImageIcon size={14}/> Banner</span>
-                    <span className="text-xs opacity-80">Configurar</span>
-                  </button>
-                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[140px] text-left">
-                    <span className="font-semibold">Balões Restantes</span>
-                    <span className="text-lg font-bold">{balloonCount - Object.keys(poppedBalloons).length}</span>
-                  </div>
-                  <div className="inline-flex flex-col justify-center bg-white/10 border border-white/15 rounded-2xl px-4 py-3 min-w-[120px] text-left">
-                    <span className="font-semibold">Estourados</span>
-                    <span className="text-lg font-bold">{Object.keys(poppedBalloons).length}</span>
-                  </div>
-                </div>
-              )}
+            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => {
+                  setIsRolling(true);
+                  playRollSound();
+                  setPopped({});
+                  setShowSplash(false);
+                  setSelectedPrizeIds(new Set());
+                  setWinner((w) => ({ ...w, prize: '' }));
+                  // escolhe uma cor diferente para o modo cor única
+                  setSingleColorIndex((idx) => (idx + 1 + Math.floor(Math.random() * (BALLOON_COLORS.length - 1))) % BALLOON_COLORS.length);
+                }}
+                className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 text-white shadow-[0_6px_14px_rgba(0,0,0,0.25)] hover:shadow-[0_8px_18px_rgba(0,0,0,0.3)] active:scale-95 border border-emerald-600 flex items-center justify-center"
+                title="Sortear novamente"
+              >
+                <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-white/20 border border-white/40 animate-[rollDice_1s_linear_infinite] text-lg shadow-inner">
+                  🎲
+                </span>
+              </button>
+              <button
+                onClick={() => setShowSplash(true)}
+                className="p-2 rounded-lg bg-yellow-400 text-slate-900 shadow-md hover:shadow-lg active:scale-95"
+                title="Ajuda"
+              >
+                <HelpCircle size={18} />
+              </button>
             </div>
-          </main>
-        </div>
+          </div>
+          <nav className={`max-w-6xl mx-auto px-4 pb-1 flex items-center gap-2 text-[11px] font-semibold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>
+            {[
+              { id: 'config', label: t('tabConfig'), icon: '🎬' },
+              { id: 'winner', label: t('tabWinner'), icon: '🏆' },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(prev => prev === tab.id ? null : (tab.id as 'config' | 'winner'))}
+                className={`group flex-1 inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg border transition cursor-pointer relative ${
+                  activeTab === tab.id ? navActive : navInactive
+                }`}
+              >
+                <span className={`absolute left-2 right-2 bottom-[2px] h-0.5 rounded-full transition-all duration-200 ${
+                  activeTab === tab.id ? 'bg-sky-500 opacity-90' : 'bg-sky-500 opacity-0 group-hover:opacity-60'
+                }`} />
+                <span className="text-base">{tab.icon}</span>
+                <span className="capitalize">{tab.label}</span>
+              </button>
+            ))}
+          </nav>
+        </header>
 
-        {/* Settings panel */}
-        <aside className="hidden lg:block lg:w-80 lg:h-screen lg:sticky lg:top-0">
-          <SettingsPanel
-            balloonCount={balloonCount}
-            setBalloonCount={handleBalloonCountChange}
-            singleColor={singleColor}
-            setSingleColor={setSingleColor}
-            soundEnabled={soundEnabled}
-            setSoundEnabled={setSoundEnabled}
-            prizeSelections={prizeSelections}
-            setPrizeSelections={setPrizeSelections}
-            onReset={handleReset}
-            onScreenshot={handleOpenWinnerModal}
-            isShuffling={isShuffling}
-            shuffleProgress={shuffleProgress}
-          />
-        </aside>
-
-        {/* Mobile settings drawer */}
-        {showSettingsMobile && (
-          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm lg:hidden flex justify-end overflow-hidden">
-            <div className="w-full max-w-md h-full bg-slate-900 border-l border-white/10 shadow-2xl flex flex-col">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 flex-shrink-0">
-                <span className="text-white font-semibold">Configurações</span>
+        <main className="max-w-6xl mx-auto px-4 pb-10 space-y-4">
+          {activeTab === 'config' && (
+            <section className={`${panelClass} rounded-2xl p-3 sm:p-4 space-y-4 max-h-[75vh] overflow-auto sm:max-h-none`}>
+          {showWizard && (
+            <div className="bg-slate-50 text-slate-800 border border-slate-200 rounded-xl p-4 space-y-3">
+              <h3 className="text-base font-semibold">{t('wizardTitle')}</h3>
+              <label className="flex flex-col text-sm gap-1">
+                {t('wizardCount')}
+                <input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={wizardBalloonCount}
+                  onChange={(e) => setWizardBalloonCount(parseInt(e.target.value) || 1)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </label>
+              <label className="flex flex-col text-sm gap-1">
+                {t('wizardItems')}
+                <textarea
+                  value={wizardItems}
+                  onChange={(e) => setWizardItems(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                />
+              </label>
+              <div className="flex flex-wrap gap-2 justify-end text-sm">
                 <button
-                  onClick={() => setShowSettingsMobile(false)}
-                  className="text-white/80 hover:text-white transition-colors"
+                  onClick={() => { setShowWizard(false); localStorage.setItem('pixpoc_wizard_done','true'); }}
+                  className="bg-slate-200 text-slate-700 hover:bg-slate-300 px-4 py-2 rounded-lg transition"
                 >
-                  <X size={22} />
+                  {t('wizardSkip')}
                 </button>
-              </div>
-              <SettingsPanel
-                balloonCount={balloonCount}
-                setBalloonCount={handleBalloonCountChange}
-                singleColor={singleColor}
-                setSingleColor={setSingleColor}
-                soundEnabled={soundEnabled}
-                setSoundEnabled={setSoundEnabled}
-                prizeSelections={prizeSelections}
-                setPrizeSelections={setPrizeSelections}
-                onReset={handleReset}
-                onScreenshot={handleOpenWinnerModal}
-                isShuffling={isShuffling}
-                shuffleProgress={shuffleProgress}
-                fullWidth
-                className="max-w-none flex-1 overflow-y-auto"
-                style={{ boxShadow: 'none', borderLeft: 'none' }}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Duplicate Modal */}
-        {showDuplicateModal && pendingBalloonCount !== null && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Selecione Valores para Duplicar</h2>
-                <button 
-                  className="text-gray-500 hover:text-gray-700 transition-colors" 
-                  onClick={handleDuplicateModalClose}
+                <button
+                  onClick={applyWizard}
+                  className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg shadow hover:shadow-lg"
                 >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <p className="text-sm text-gray-700 mb-4">
-                Você selecionou <strong>{pendingBalloonCount} balões</strong>, mas existem apenas <strong>{Object.keys(prizeSelections).length} valores únicos</strong>.
-                <br />
-                Selecione <strong>{pendingBalloonCount - Object.keys(prizeSelections).length} valor(es)</strong> para serem duplicados no sorteio:
-              </p>
-              
-              <div className="mb-6 max-h-64 overflow-y-auto space-y-2 border border-gray-200 rounded-lg p-3">
-                {Object.keys(prizeSelections).map((prize) => (
-                  <label
-                    key={prize}
-                    className="flex items-center gap-3 text-gray-800 cursor-pointer hover:bg-gray-50 p-2 rounded transition-colors"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={duplicateSelections.includes(prize)}
-                      onChange={() => toggleDuplicateValue(prize)}
-                      className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="font-medium">{prize}</span>
-                  </label>
-                ))}
-              </div>
-              
-              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Selecionados:</strong> {duplicateSelections.length} de {pendingBalloonCount - Object.keys(prizeSelections).length} necessários
-                </p>
-              </div>
-              
-              <div className="flex justify-end gap-3">
-                <button 
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium" 
-                  onClick={handleDuplicateModalClose}
-                >
-                  Cancelar
-                </button>
-                <button 
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    duplicateSelections.length === pendingBalloonCount - Object.keys(prizeSelections).length
-                      ? 'bg-green-600 text-white hover:bg-green-700'
-                      : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  onClick={handleDuplicateModalConfirm}
-                  disabled={duplicateSelections.length !== pendingBalloonCount - Object.keys(prizeSelections).length}
-                >
-                  Confirmar
+                  {t('wizardApply')}
                 </button>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Winner Info Modal */}
-        {showWinnerModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                  <User size={28} className="text-yellow-500" />
-                  Dados do Ganhador
-                </h2>
-                <button 
-                  className="text-gray-500 hover:text-gray-700 transition-colors" 
-                  onClick={handleCloseWinnerModal}
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <p className="text-sm text-gray-600 mb-6">
-                Preencha as informações abaixo (todos os campos são opcionais). As informações serão exibidas no canto superior direito da tela para facilitar o print nativo do dispositivo.
-              </p>
-              
-              <div className="space-y-4 mb-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    🏆 Nome do Ganhador
-                  </label>
-                  <input
-                    type="text"
-                    value={winnerInfo.name}
-                    onChange={(e) => setWinnerInfo({ ...winnerInfo, name: e.target.value })}
-                    placeholder="Ex: João Silva"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    📝 Referência do Prêmio
-                  </label>
-                  <input
-                    type="text"
-                    value={winnerInfo.reference}
-                    onChange={(e) => setWinnerInfo({ ...winnerInfo, reference: e.target.value })}
-                    placeholder="Ex: Sorteio Live 29/03/2026"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    💰 Chave PIX para Transferência
-                  </label>
-                  <input
-                    type="text"
-                    value={winnerInfo.pixKey}
-                    onChange={(e) => setWinnerInfo({ ...winnerInfo, pixKey: e.target.value })}
-                    placeholder="Ex: 11987654321 ou email@exemplo.com"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-              </div>
-
-              <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-6">
-                <p className="text-xs text-yellow-800">
-                  💡 <strong>Dica:</strong> Use o print nativo do seu dispositivo (PrtScn no Windows, Cmd+Shift+3 no Mac, botão físico no mobile) para capturar a tela com todas as informações!
-                </p>
-              </div>
-              
-              <div className="flex justify-between gap-3">
-                <button 
-                  className="px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors font-medium flex items-center gap-2" 
-                  onClick={handleClearWinnerInfo}
-                >
-                  <Trash2 size={16} />
-                  Limpar Dados
-                </button>
-                <div className="flex gap-3">
-                  <button 
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium" 
-                    onClick={handleCloseWinnerModal}
+              <div className="space-y-3 text-sm text-slate-700">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold">{t('prizesTitle')}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPrizes((prev) => [...prev, { id: (prev.at(-1)?.id || 0) + 1, description: '', qty: 1 }])}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-green-600 to-emerald-600 text-white text-xs shadow hover:shadow-md"
                   >
-                    Cancelar
-                  </button>
-                  <button 
-                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors font-medium flex items-center gap-2"
-                    onClick={handleSaveWinnerInfo}
-                  >
-                    <CheckCircle size={18} />
-                    Salvar
+                    <Plus size={14} /> Adicionar
                   </button>
                 </div>
+
+                <div className={`overflow-x-auto rounded-lg ${isDark ? 'border border-slate-700 bg-slate-900/80' : 'border border-slate-200 bg-white/60'}`}>
+                  <table className="w-full text-xs sm:text-sm">
+                    <thead className={isDark ? 'bg-slate-800 text-slate-200 uppercase text-[11px]' : 'bg-slate-100 text-slate-600 uppercase text-[11px]'}>
+                      <tr>
+                        <th className="px-2 py-2 text-left">Item</th>
+                        <th className="px-2 py-2 text-left">Descrição</th>
+                        <th className="px-2 py-2 text-left">Qtde</th>
+                        <th className="px-2 py-2 text-left">Imagem</th>
+                        <th className="px-2 py-2"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {prizes.map((p, idx) => (
+                        <tr key={p.id} className={idx % 2 ? (isDark ? 'bg-slate-800/60' : 'bg-white/40') : (isDark ? 'bg-slate-800/30' : 'bg-white/80')}>
+                          <td className={`px-2 py-2 font-semibold ${isDark ? 'text-slate-100' : 'text-slate-700'}`}>{idx + 1}</td>
+                          <td className="px-2 py-2">
+                            <input
+                              value={p.description}
+                              onChange={(e) => setPrizes((prev) => prev.map((row) => row.id === p.id ? { ...row, description: e.target.value } : row))}
+                              className={inputClass('w-full px-2 py-1 rounded-md text-sm')}
+                              placeholder="Ex: R$ 10,00"
+                            />
+                          </td>
+                          <td className="px-2 py-2 w-24">
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              value={p.qty}
+                              onChange={(e) => {
+                                const val = Math.max(1, Math.min(99, parseInt(e.target.value) || 1));
+                                setPrizes((prev) => prev.map((row) => row.id === p.id ? { ...row, qty: val } : row));
+                              }}
+                              className={inputClass('w-full px-2 py-1 rounded-md text-sm text-center')}
+                            />
+                          </td>
+                          <td className="px-2 py-2">
+                            <div className="flex items-center gap-2">
+                              <label className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-slate-200 cursor-pointer bg-white hover:border-slate-300 text-xs">
+                                <Upload size={14} />
+                                <span>{t('addImage')}</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const reader = new FileReader();
+                                    reader.onload = (ev) => {
+                                      const dataUrl = ev.target?.result as string;
+                                      setPrizes((prev) => prev.map((row) => row.id === p.id ? { ...row, image: dataUrl } : row));
+                                    };
+                                    reader.readAsDataURL(file);
+                                  }}
+                                />
+                              </label>
+                              {p.image && (
+                                <div className="w-10 h-10 rounded-md overflow-hidden border border-slate-200">
+                                  <img src={p.image} alt="thumb" className="w-full h-full object-cover" />
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-2 py-2 text-right">
+                            <button
+                              onClick={() => setPrizes((prev) => prev.filter((row) => row.id !== p.id))}
+                              className="text-red-500 hover:text-red-600"
+                              title={t('remove')}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                      {prizes.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="text-center text-slate-500 py-3">Adicione prêmios para compor o sorteio.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="text-xs text-slate-600">
+                  Total de itens/balões: <strong>{balloonCount}</strong>
+                </div>
+
+                <div className="space-y-2">
+                  {[
+                    {
+                      label: t('singleColor'),
+                      active: singleColor,
+                      onToggle: () => setSingleColor(!singleColor),
+                    },
+                    {
+                      label: t('sound'),
+                      active: sound,
+                      onToggle: () => setSound(!sound),
+                    },
+                    {
+                      label: t('dark'),
+                      active: bg === 'dark',
+                      onToggle: () => setBg(bg === 'dark' ? 'gradient' : 'dark'),
+                    },
+                  ].map((item, idx) => (
+                    <div key={idx} className={`flex items-center justify-between px-3 py-2 rounded-lg border ${isDark ? 'border-slate-700 bg-slate-800 text-white' : 'border-slate-200 bg-white text-slate-700'}`}>
+                      <span className="font-medium">{item.label}</span>
+                      <button
+                        onClick={item.onToggle}
+                        className={`relative w-14 h-7 rounded-full transition-colors ${item.active ? 'bg-green-500' : 'bg-gray-400'}`}
+                        type="button"
+                      >
+                        <div
+                          className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
+                            item.active ? 'translate-x-7' : 'translate-x-0'
+                          }`}
+                        />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                <label className="flex flex-col gap-1">
+                  {t('language')}
+                  <select value={language} onChange={(e) => setLanguage(e.target.value)} className={inputClass('w-full px-3 py-2 rounded-lg')}>
+                    <option value="pt-BR">Português (Brasil)</option>
+                    <option value="en-US">English</option>
+                  </select>
+                </label>
               </div>
+
+            </section>
+          )}
+
+          {activeTab === 'winner' && (
+            <section className={`${panelClass} rounded-2xl p-4 space-y-4 max-h-[75vh] overflow-auto sm:max-h-none`}>
+              <h2 className="text-lg font-bold flex items-center gap-2 text-amber-700">🏆 {t('winnerTitle')}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                <label className="flex flex-col gap-1">
+                  {t('name')}
+                  <input className={inputClass('w-full px-3 py-2 rounded-lg')} value={winner.name} onChange={(e)=>setWinner({...winner,name:e.target.value})} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  {t('prize')}
+                  <input className={inputClass('w-full px-3 py-2 rounded-lg')} value={winner.prize} onChange={(e)=>setWinner({...winner,prize:e.target.value})} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  {t('contact')}
+                  <input className={inputClass('w-full px-3 py-2 rounded-lg')} value={winner.contact} onChange={(e)=>setWinner({...winner,contact:e.target.value})} />
+                </label>
+                <label className="flex flex-col gap-1">
+                  {t('pix')}
+                  <input className={inputClass('w-full px-3 py-2 rounded-lg')} value={winner.pix} onChange={(e)=>setWinner({...winner,pix:e.target.value})} />
+                </label>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800/70 border-slate-600' : 'bg-amber-50 border border-amber-200'}`}>
+                  <div className="font-semibold">{t('timestamp')}</div>
+                  <div>{new Date().toLocaleString(language)}</div>
+                </div>
+                <div className={`p-3 rounded-lg ${isDark ? 'bg-slate-800/70 border-slate-600' : 'bg-amber-50 border border-amber-200'}`}>
+                  <div className="font-semibold">{t('ip')}</div>
+                  <div className="truncate">(collect via external service)</div>
+                </div>
+                <div className={`p-3 rounded-lg flex flex-col gap-1 ${isDark ? 'bg-slate-800/70 border-slate-600' : 'bg-amber-50 border border-amber-200'}`}>
+                  <div className="font-semibold">{t('audit')}</div>
+                  <span>{t('balloonsCount')}: {balloonCount}</span>
+                  <span>{t('poppedCount')}: {Object.keys(popped).length}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <button onClick={saveReport} className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg shadow hover:shadow-lg">{t('saveReport')}</button>
+                <button onClick={()=>setWinner({name:'',prize:'',contact:'',pix:''})} className="px-4 py-2 bg-red-50 text-red-600 rounded-lg border border-red-200 hover:bg-red-100">{t('clear')}</button>
+              </div>
+            </section>
+          )}
+
+            <section className={`${cardSoftBg} rounded-2xl shadow-lg p-4`}>
+            <div
+              className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 justify-items-center"
+              style={{
+                gap: 'clamp(14px, 1.4vw, 22px)',
+                ['--balloon-size' as any]: 'clamp(140px, 12vw, 210px)',
+                ['--balloon-height' as any]: 'clamp(175px, 15vw, 260px)',
+              }}
+            >
+              {balloons.map((b, idx) => (
+                <Balloon
+                  key={b.id}
+                  number={b.id}
+                  color={b.color}
+                  onPop={handlePop}
+                  isPopped={b.id in popped}
+                  currency={popped[b.id] || null}
+                  soundEnabled={sound}
+                  isHighlighted={selectedPrizeIds.has(b.id)}
+                  onToggleHighlight={handleToggleHighlight}
+                  disableFloat
+                />
+              ))}
             </div>
-          </div>
-        )}
-
-        {/* Banner Config Modal */}
-        <BannerConfigModal
-          isOpen={showBannerConfig}
-          onClose={() => setShowBannerConfig(false)}
-          config={bannerConfig}
-          onSave={handleSaveBannerConfig}
-        />
-
-        {/* Password Modal */}
-        {showPasswordModal && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-6 rounded-xl shadow-2xl w-full max-w-md">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Configurar Banner</h2>
-                <button 
-                  className="text-gray-500 hover:text-gray-700 transition-colors" 
-                  onClick={() => setShowPasswordModal(false)}
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              
-              <p className="text-sm text-gray-700 mb-4">
-                Para configurar o banner, insira a senha de acesso:
-              </p>
-              
-              <form onSubmit={handlePasswordSubmit}>
-                <div className="mb-6">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Senha
-                  </label>
-                  <input
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder="Ex: %6WmoDF76$re30!hgf5%67&"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                {passwordError && (
-                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                    <p className="text-sm text-red-800">
-                      Senha incorreta. Tente novamente.
-                    </p>
-                  </div>
-                )}
-                
-                <div className="flex justify-end gap-3">
-                  <button 
-                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium" 
-                    onClick={() => setShowPasswordModal(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-colors font-medium flex items-center gap-2"
-                    type="submit"
-                  >
-                    <CheckCircle size={18} />
-                    Confirmar
-                  </button>
-                </div>
-              </form>
+            <div className={`mt-4 flex flex-wrap gap-2 text-xs ${isDark ? 'text-white' : 'text-slate-600'}`}>
+              <span className={`px-3 py-1 rounded-full ${badgeClass}`}>{t('statsRemaining')}: {balloonCount - Object.keys(popped).length}</span>
+              <span className={`px-3 py-1 rounded-full ${badgeClass}`}>{t('statsPopped')}: {Object.keys(popped).length}</span>
             </div>
-          </div>
-        )}
+          </section>
+        </main>
       </div>
+
+      <BannerConfigModal
+        isOpen={showBannerModal}
+        onClose={() => setShowBannerModal(false)}
+        config={{
+          imageUrl: bannerConfig.imageUrl,
+          altText: bannerConfig.altText,
+          linkUrl: '',
+          isActive: true,
+          maxViews: 0,
+          currentViews: 0,
+        }}
+        onSave={(cfg) => {
+          setBannerConfig(cfg);
+          setShowBannerModal(false);
+        }}
+      />
     </>
   );
 }
