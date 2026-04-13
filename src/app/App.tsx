@@ -163,6 +163,7 @@ export default function App() {
     return localStorage.getItem('pixpoc_wizard_done') !== 'true';
   });
   const [wizardItems, setWizardItems] = useState('R$ 0,00\nR$ 5,00\nR$ 10,00');
+  const [wizardBalloonCount, setWizardBalloonCount] = useState(12);
 
   const wizardItemsArray = useMemo(
     () => wizardItems.split(/\r?\n/).map((t) => t.trim()).filter(Boolean),
